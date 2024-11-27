@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
  * 用于标识字段在转换为 Map
  *
  * @author Mr.An
- * @date 2024/11/27
+ * @since 2024/11/27
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)

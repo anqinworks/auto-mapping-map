@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * 要映射Map
  *
  * @author Mr.An
- * @date 2024/11/13
+ * @since 2024/11/13
  */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
