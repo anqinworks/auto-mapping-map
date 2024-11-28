@@ -5,6 +5,18 @@
 1.在项目中的 `.pom` 文件中添加：
 
 ```xml
+	<properties>
+		<auto-mapping-map.version>1.0</auto-mapping-map.version>
+	</properties>
+
+<dependencys>
+    <dependency>
+      <groupId>io.github.mr-anqin</groupId>
+      <artifactId>auto-mapping-map</artifactId>
+      <version>${auto-mapping-map.version}</version>
+   </dependency>
+</dependencys>
+
     <build>
         <plugins>
             <plugin>
@@ -17,7 +29,7 @@
                     <encoding>UTF-8</encoding>
                     <annotationProcessorPaths>
                         <path>
-                            <groupId>cc.anqin</groupId>
+                            <groupId>io.github.mr-anqin</groupId>
                             <artifactId>auto-mapping-map</artifactId>
                             <version>${auto-mapping-map.version}</version>
                         </path>
