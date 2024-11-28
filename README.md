@@ -11,7 +11,7 @@
 
 <dependencys>
     <dependency>
-      <groupId>io.github.mr-anqin</groupId>
+      <groupId>io.github.anqinworks</groupId>
       <artifactId>auto-mapping-map</artifactId>
       <version>${auto-mapping-map.version}</version>
    </dependency>
