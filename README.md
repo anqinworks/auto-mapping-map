@@ -5,9 +5,9 @@
 1.在项目中的 `.pom` 文件中添加：
 
 ```xml
-	<properties>
-		<auto-mapping-map.version>1.0</auto-mapping-map.version>
-	</properties>
+<properties>
+   <auto-mapping-map.version>1.0</auto-mapping-map.version>
+</properties>
 
 <dependencys>
     <dependency>
