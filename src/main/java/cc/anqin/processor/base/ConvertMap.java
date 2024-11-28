@@ -29,10 +29,13 @@ public class ConvertMap {
      */
     public static final String CLASS_SUFFIX = "_MapConverter";
 
+    public static final String PACKAGE_NAME = "cc.anqin";
+
 
     static {
+
         // 1.获取 加了指定注解的所有类,扫描所有包
-        Set<Class<?>> classes = ClassUtil.scanPackageBySuper(null, MappingConvert.class);
+        Set<Class<?>> classes = ClassUtil.scanPackageBySuper(PACKAGE_NAME, MappingConvert.class);
         Map<String, MappingConvert<?>> dataMap = classes.stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Class::getSimpleName, v -> {

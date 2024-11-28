@@ -22,6 +22,8 @@ import java.util.*;
 import cc.anqin.processor.annotation.AutoToMap;
 import cc.anqin.processor.base.ConvertMap;
 
+import static cc.anqin.processor.base.ConvertMap.PACKAGE_NAME;
+
 /**
  * <p>Map转换器处理器</p>
  *
@@ -47,7 +49,8 @@ public class MapConverterProcessor extends AbstractProcessor {
         String className = typeElement.getSimpleName() + ConvertMap.CLASS_SUFFIX;
         String packageName = processingEnv.getElementUtils().getPackageOf(typeElement).toString();
 
-        System.out.println("Generating file: " + packageName + "." + className);
+
+        System.out.println("Generating file: " + PACKAGE_NAME + "." + className);
 
         // 创建 toMap 方法
         MethodSpec.Builder toMapBuilder = MethodSpec.methodBuilder("toMap")
@@ -91,7 +94,7 @@ public class MapConverterProcessor extends AbstractProcessor {
                 .build();
 
         // 写入 Java 文件
-        JavaFile javaFile = JavaFile.builder(packageName, mapConverterClass).build();
+        JavaFile javaFile = JavaFile.builder(PACKAGE_NAME + "." + packageName, mapConverterClass).build();
         try {
             javaFile.writeTo(processingEnv.getFiler());
         } catch (IOException e) {

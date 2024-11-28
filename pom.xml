@@ -6,7 +6,7 @@
 	<artifactId>auto-mapping-map</artifactId>
 	<groupId>io.github.mr-anqin</groupId>
 	<name>auto-mapping-map</name>
-	<version>0.0.1</version>
+	<version>1.1</version>
 	<description>auto-mapping-map</description>
 	<url>https://github.com/mr-anqin/auto-mapping-map</url>
 	<packaging>jar</packaging>
