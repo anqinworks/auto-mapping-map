@@ -4,11 +4,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<artifactId>auto-mapping-map</artifactId>
-	<groupId>io.github.mr-anqin</groupId>
+	<groupId>io.github.anqinworks</groupId>
 	<name>auto-mapping-map</name>
 	<version>1.1</version>
 	<description>auto-mapping-map</description>
-	<url>https://github.com/mr-anqin/auto-mapping-map</url>
+	<url>https://github.com/anqinworks/auto-mapping-map</url>
 	<packaging>jar</packaging>
 
 	<licenses>
@@ -29,9 +29,9 @@
 
 
 	<scm>
-		<connection>https://github.com/mr-anqin/auto-mapping-map.git</connection>
-		<developerConnection>scm:git:ssh://git@github.com:mr-anqin/auto-mapping-map.git</developerConnection>
-		<url>https://github.com/mr-anqin/auto-mapping-map</url>
+		<connection>https://github.com/anqinworks/auto-mapping-map.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com:anqinworks/auto-mapping-map.git</developerConnection>
+		<url>https://github.com/anqinworks/auto-mapping-map</url>
 	</scm>
 
 
@@ -128,7 +128,6 @@
 				</executions>
 				<configuration>
 					<executable>gpg</executable>
-					<keyname>D79926FF50738E6A446C7B2C325923C58E681A0F</keyname>
 				</configuration>
 			</plugin>
 			<!-- 新方式的配置，将组件部署到OSSRH并将其发布到Central Repository-->

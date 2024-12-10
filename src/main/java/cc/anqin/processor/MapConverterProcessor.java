@@ -1,7 +1,6 @@
 package cc.anqin.processor;
 
 import cc.anqin.processor.annotation.AutoKeyMapping;
-import cn.hutool.core.lang.Opt;
 import cn.hutool.core.util.StrUtil;
 import com.squareup.javapoet.*;
 
@@ -127,7 +126,7 @@ public class MapConverterProcessor extends AbstractProcessor {
                 }
 
                 // 确定目标字段名：优先取 annotation.target，否则默认使用 fieldName
-                String targetFieldName = Opt.ofNullable(annotation)
+                String targetFieldName = Optional.ofNullable(annotation)
                         .map(AutoKeyMapping::target)
                         .filter(StrUtil::isNotBlank)
                         .orElse(fieldName);
