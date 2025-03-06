@@ -53,4 +53,15 @@ under the License.
             <password>HGGZSTNUdU0G6lJMdtZAj+ZsSmxKOTw2RqCihm9brGUi</password>
         </server>
     </servers>
+
+
+    <proxies>
+        <proxy>
+            <id>proxy</id> <!-- 代理的唯一标识 -->
+            <active>true</active> <!-- 是否启用代理 -->
+            <protocol>http</protocol> <!-- 代理协议，通常是 http 或 https -->
+            <host>127.0.0.1</host> <!-- 代理服务器地址 -->
+            <port>7890</port> <!-- 代理服务器端口 -->
+        </proxy>
+    </proxies>
 </settings>

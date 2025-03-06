@@ -19,5 +19,4 @@ public enum MappingEnum {
     TO_MAP,
 
     TO_BEAN,
-
 }

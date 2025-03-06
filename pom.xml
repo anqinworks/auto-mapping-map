@@ -7,7 +7,7 @@
     <groupId>io.github.anqinworks</groupId>
     <name>auto-mapping-map</name>
     <version>2.0</version>
-    <description>auto-mapping-map</description>
+    <description>实体类（POJO）和 Map 之间的相互转换</description>
     <url>https://github.com/anqinworks/auto-mapping-map</url>
     <packaging>jar</packaging>
 
@@ -40,6 +40,7 @@
         <java.version>1.8</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
+        <lombok.version>1.18.30</lombok.version>
     </properties>
 
     <dependencies>
@@ -56,7 +57,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.30</version>
+            <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -77,7 +78,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.22</version>
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
@@ -153,6 +154,3 @@
         </snapshotRepository>
     </distributionManagement>
 </project>
-
-
-        <!--        mvn install:install-file -Dfile=D:\anqinworks\auto-mapping-map\target\auto-mapping-map-1.1.jar -DgroupId=local.io.github.anqinworks -DartifactId=auto-mapping-map -Dversion=1.1 -Dpackaging=jar-->
