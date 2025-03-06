@@ -1,6 +1,7 @@
 package cc.anqin.processor.base;
 
 import cn.hutool.core.util.ClassUtil;
+import cn.hutool.core.util.StrUtil;
 import lombok.Getter;
 
 import java.util.Collections;
@@ -38,28 +39,75 @@ public class ConvertMap {
         Set<Class<?>> classes = ClassUtil.scanPackageBySuper(PACKAGE_NAME, MappingConvert.class);
         Map<String, MappingConvert<?>> dataMap = classes.stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Class::getSimpleName, v -> {
-                    try {
-                        return (MappingConvert<?>) v.getDeclaredConstructor().newInstance();
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }, (nk, ok) -> nk));
+                .collect(Collectors.toMap(Class::getSimpleName,
+                        v -> {
+                            try {
+                                return (MappingConvert<?>) v.getDeclaredConstructor().newInstance();
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        }, (nk, ok) -> nk));
         convertMap = Collections.unmodifiableMap(dataMap);
     }
 
     /**
-     * 转换
+     * 转换 Map
      *
      * @param source 源
      * @param clazz  clazz
      * @return {@link MappingConvert }
      */
-    @SuppressWarnings("all")
-    public static Map<String, Object> toMap(Object source, Class<?> clazz) {
+    public static <T> Map<String, Object> toMap(T source, Class<T> clazz) {
         if (source == null || clazz == null) return null;
-        MappingConvert convert = convertMap.get(clazz.getSimpleName() + CLASS_SUFFIX);
+        MappingConvert<T> convert = getMappingConvert(clazz);
         if (convert == null) return null;
         return convert.toMap(source);
+    }
+
+    /**
+     * 转换 为 Bean
+     *
+     * @param dataMap dataMap
+     * @param clazz   clazz
+     * @return {@link MappingConvert }
+     */
+
+    public static <T> T toBean(Map<String, Object> dataMap, Class<T> clazz) {
+        if (dataMap == null || clazz == null) return null;
+        MappingConvert<T> convert = getMappingConvert(clazz);
+        if (convert == null) return null;
+        return convert.toBean(dataMap);
+    }
+
+
+    /**
+     * 获取映射转换
+     *
+     * @param clazz clazz
+     * @return {@link MappingConvert }<{@link ? }>
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> MappingConvert<T> getMappingConvert(Class<T> clazz) {
+        return (MappingConvert<T>) convertMap.get(getConvertName(clazz));
+    }
+
+    /**
+     * 获取转换名称
+     *
+     * @param clazz clazz
+     * @return {@link String }
+     */
+    public static String getConvertName(Class<?> clazz) {
+        return getConvertName(clazz.getName());
+    }
+
+    /**
+     * 获取转换名称
+     *
+     * @param packageName 包名称
+     * @return {@link String }
+     */
+    public static String getConvertName(String packageName) {
+        return StrUtil.replace(packageName, ".", "_") + CLASS_SUFFIX;
     }
 }

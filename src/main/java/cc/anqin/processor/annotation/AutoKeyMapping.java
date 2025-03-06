@@ -1,5 +1,7 @@
 package cc.anqin.processor.annotation;
 
+import cc.anqin.processor.enums.MappingEnum;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -22,9 +24,15 @@ public @interface AutoKeyMapping {
      */
     boolean ignore() default false;
 
+    /**
+     * 方法
+     *
+     * @return {@link MappingEnum }
+     */
+    MappingEnum method() default MappingEnum.ALL;
 
     /**
-     * 转为目标的 key 名称
+     * 转为目标的 key 名称, 只限 toMap
      *
      * @return {@link String }
      */
