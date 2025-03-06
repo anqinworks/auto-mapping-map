@@ -7,6 +7,7 @@ import cc.anqin.processor.enums.MappingEnum;
 import cn.hutool.core.util.StrUtil;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
+
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.*;
 import javax.lang.model.type.TypeMirror;
@@ -17,13 +18,17 @@ import java.util.Optional;
  * 收集字段
  *
  * @author Mr.An
- * @date 2025/03/06
+ * @since 2025/03/06
  */
 public class CollectFields {
 
 
     /**
      * 递归收集类及其父类的字段
+     *
+     * @param typeElement   类型元素
+     * @param toMapBuilder  致地图构建者
+     * @param processingEnv 处理环境
      */
     public static void toMapCollectFields(TypeElement typeElement, MethodSpec.Builder toMapBuilder, ProcessingEnvironment processingEnv) {
         // 获取当前类的字段
@@ -78,6 +83,12 @@ public class CollectFields {
         }
     }
 
+    /**
+     * 去收豆田
+     *
+     * @param typeElement         类型元素
+     * @param toBeanMethodBuilder to bean方法生成器
+     */
     public static void toBeanCollectFields(TypeElement typeElement, MethodSpec.Builder toBeanMethodBuilder) {
 
         // 动态生成 set 方法调用

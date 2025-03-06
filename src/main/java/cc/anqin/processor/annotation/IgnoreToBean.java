@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * 忽略 转换为 bean
  *
  * @author Mr.An
- * @date 2025/03/06
+ * @since 2025/03/06
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)

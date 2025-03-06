@@ -5,6 +5,7 @@ import java.util.Map;
 /**
  * 映射转换
  *
+ * @param <T> entity
  * @author Mr.An
  * @since 2024/11/13
  */

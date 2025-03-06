@@ -55,6 +55,7 @@ public class ConvertMap {
      *
      * @param source 源
      * @param clazz  clazz
+     * @param <T>    entity
      * @return {@link MappingConvert }
      */
     public static <T> Map<String, Object> toMap(T source, Class<T> clazz) {
@@ -69,9 +70,9 @@ public class ConvertMap {
      *
      * @param dataMap dataMap
      * @param clazz   clazz
+     * @param <T>     entity
      * @return {@link MappingConvert }
      */
-
     public static <T> T toBean(Map<String, Object> dataMap, Class<T> clazz) {
         if (dataMap == null || clazz == null) return null;
         MappingConvert<T> convert = getMappingConvert(clazz);
@@ -84,6 +85,7 @@ public class ConvertMap {
      * 获取映射转换
      *
      * @param clazz clazz
+     * @param <T>   entity
      * @return {@link MappingConvert }<{@link ? }>
      */
     @SuppressWarnings("unchecked")
