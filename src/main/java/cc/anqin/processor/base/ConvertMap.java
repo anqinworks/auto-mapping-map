@@ -50,17 +50,18 @@ public class ConvertMap {
         convertMap = Collections.unmodifiableMap(dataMap);
     }
 
+
     /**
      * 转换 Map
      *
      * @param source 源
      * @param clazz  clazz
-     * @param <T>    entity
      * @return {@link MappingConvert }
      */
-    public static <T> Map<String, Object> toMap(T source, Class<T> clazz) {
+    @SuppressWarnings("all")
+    public static  Map<String, Object> toMap(Object source, Class<?> clazz) {
         if (source == null || clazz == null) return null;
-        MappingConvert<T> convert = getMappingConvert(clazz);
+        MappingConvert convert = getMappingConvert(clazz);
         if (convert == null) return null;
         return convert.toMap(source);
     }
