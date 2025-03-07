@@ -96,6 +96,11 @@ public class CollectFields {
             if (element.getKind() == ElementKind.FIELD) { // 只处理字段
                 VariableElement field = (VariableElement) element;
 
+                // 跳过 final 字段
+                if (field.getModifiers().contains(Modifier.FINAL)) {
+                    continue;
+                }
+
                 if (field.getAnnotation(IgnoreToBean.class) != null) {
                     continue;
                 }
