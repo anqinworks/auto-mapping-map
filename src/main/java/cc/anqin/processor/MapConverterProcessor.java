@@ -119,7 +119,7 @@ public class MapConverterProcessor extends AbstractProcessor {
 
 
         // 遍历Map的 字段
-        CollectFields.toBeanCollectFields(typeElement, toBeanMethodBuilder);
+        CollectFields.toBeanCollectFields(typeElement, toBeanMethodBuilder,processingEnv);
 
         toBeanMethodBuilder.addStatement("return bean");
         return toBeanMethodBuilder.build();

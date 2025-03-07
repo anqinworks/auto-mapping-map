@@ -89,7 +89,7 @@ public class CollectFields {
      * @param typeElement         类型元素
      * @param toBeanMethodBuilder to bean方法生成器
      */
-    public static void toBeanCollectFields(TypeElement typeElement, MethodSpec.Builder toBeanMethodBuilder) {
+    public static void toBeanCollectFields(TypeElement typeElement, MethodSpec.Builder toBeanMethodBuilder, ProcessingEnvironment processingEnv) {
 
         // 动态生成 set 方法调用
         for (Element element : typeElement.getEnclosedElements()) {
@@ -122,6 +122,15 @@ public class CollectFields {
                 // 生成 set 方法调用
                 String setMethodName = "set" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
                 toBeanMethodBuilder.addStatement("bean.$L(($T) dataMap.get(\"$L\"))", setMethodName, fieldType, fieldName);
+            }
+        }
+
+        // 递归获取父类字段
+        TypeMirror superclass = typeElement.getSuperclass();
+        if (superclass != null && !superclass.toString().equals("java.lang.Object")) {
+            Element superElement = processingEnv.getTypeUtils().asElement(superclass);
+            if (superElement instanceof TypeElement) {
+                toBeanCollectFields((TypeElement) superElement, toBeanMethodBuilder, processingEnv);
             }
         }
     }
