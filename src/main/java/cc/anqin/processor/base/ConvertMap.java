@@ -101,7 +101,7 @@ public class ConvertMap {
      * @return {@link String }
      */
     public static String getConvertName(Class<?> clazz) {
-        return getConvertName(clazz.getName());
+        return getConvertName(clazz.getCanonicalName());
     }
 
     /**

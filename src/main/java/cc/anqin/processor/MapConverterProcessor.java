@@ -46,6 +46,7 @@ public class MapConverterProcessor extends AbstractProcessor {
     }
 
     private void generateMethod(TypeElement typeElement) {
+
         String className = ConvertMap.getConvertName(typeElement.getQualifiedName().toString());
 
         String packageName = processingEnv.getElementUtils().getPackageOf(typeElement).toString();
@@ -119,7 +120,7 @@ public class MapConverterProcessor extends AbstractProcessor {
 
 
         // 遍历Map的 字段
-        CollectFields.toBeanCollectFields(typeElement, toBeanMethodBuilder,processingEnv);
+        CollectFields.toBeanCollectFields(typeElement, toBeanMethodBuilder, processingEnv);
 
         toBeanMethodBuilder.addStatement("return bean");
         return toBeanMethodBuilder.build();
