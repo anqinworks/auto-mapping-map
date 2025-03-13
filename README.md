@@ -6,7 +6,7 @@
 
 ```xml
 <properties>
-   <auto-mapping-map.version>3.5</auto-mapping-map.version>
+   <auto-mapping-map.version>3.6</auto-mapping-map.version>
 </properties>
 
 <dependencys>
