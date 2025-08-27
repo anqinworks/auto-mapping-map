@@ -12,22 +12,22 @@ import java.lang.annotation.Target;
  * 该注解用于标记在实体类转换为Map过程中需要忽略的字段。被此注解标记的字段将不会被包含在转换结果的Map中。
  * 通常用于排除敏感信息、临时字段或不需要序列化的复杂对象。
  * </p>
- * <p>
  * 示例：
+ * <blockquote>
  * <pre>
- * {@code
- * @AutoToMap
+ *
+ * &#064;AutoToMap
  * public class User {
  *     private String name;
  *     
- *     @IgnoreToMap
+ *     &#064;IgnoreToMap
  *     private String password; // 此字段在转换为Map时将被忽略
  *     
  *     // Getters and setters
  * }
- * }
+ *
  * </pre>
- * </p>
+ * </blockquote>
  *
  * @author Mr.An
  * @since 2025/03/06

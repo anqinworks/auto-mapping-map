@@ -23,6 +23,8 @@
     			<id>central</id>
     			<name>central</name>
     			<email>anqin2023@gmail.com</email>
+                <organization>AnQin</organization>
+                <organizationUrl>https://github.com/anqinworks</organizationUrl>
     			<timezone>+8</timezone>
     		</developer>
     	</developers>
@@ -61,7 +63,6 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
-
 
     <build>
         <plugins>
@@ -149,7 +150,7 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <executable>D:\tools\GnuPG\bin\gpg</executable>
+                            <executable>D:\tools\GnuPG\GnuPG\bin\gpg</executable>
                         </configuration>
                     </plugin>
                     <plugin>
@@ -166,3 +167,4 @@
         </profile>
     </profiles>
 </project>
+

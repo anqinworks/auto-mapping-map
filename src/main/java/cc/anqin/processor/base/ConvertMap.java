@@ -4,7 +4,6 @@ import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.StrUtil;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -13,18 +12,15 @@ import java.util.stream.Collectors;
  * <p>提供对象与Map之间的双向转换功能，基于预注册的转换器实现类型转换。该工具类是整个映射框架的核心入口点，
  * 负责管理和调用所有自动生成的转换器实现。</p>
  *
- * <p>转换器的注册过程：
+ * 转换器的注册过程：
  * <ol>
  *   <li>使用{@link cc.anqin.processor.annotation.AutoToMap}注解标记需要转换的实体类</li>
  *   <li>编译时，注解处理器{@link cc.anqin.processor.MapConverterProcessor}自动生成转换器实现类</li>
  *   <li>生成的转换器在类加载时自动注册到{@code CONVERT_MAP}中</li>
  * </ol>
- * </p>
  *
- * <p>使用示例：
+ * 使用示例：
  * <pre>{@code
- * // 在目标类添加 @cc.anqin.processor.annotation.AutoToMap 注解，重新编译后自动注册
- *
  * // 对象转Map
  * Map<String, Object> map = ConvertMap.toMap(user);
  *
@@ -35,11 +31,10 @@ import java.util.stream.Collectors;
  * boolean exists = ConvertMap.exists(User.class);
  *
  * // 批量转换
- * List<Map<String, Object>> mapList = ConvertMap.toMapList(userList);
- * List<User> userList = ConvertMap.toBeanList(mapList, User.class);
- * }
- * </pre>
- * </p>
+ * List<Map<String, Object>> maps = ConvertMap.toMapList(users);
+ * List<User> users = ConvertMap.toBeanList(maps, User.class);
+ * }</pre>
+ *
  *
  * @author Mr.An
  * @since 2024/11/18

@@ -16,20 +16,18 @@ import java.lang.annotation.Target;
  * 使用此注解的类必须具有无参构造函数，且需要为所有需要映射的字段提供getter和setter方法。
  * 可以通过{@link AutoKeyMapping}、{@link IgnoreToMap}和{@link IgnoreToBean}注解进一步控制字段的映射行为。
  * </p>
- * <p>
  * 示例：
+ * <blockquote>
  * <pre>
- * {@code
- * @AutoToMap
+ *
+ * &#064;AutoToMap
  * public class User {
  *     private String name;
  *     private int age;
  *     
  *     // Getters and setters
  * }
- * }
- * </pre>
- * </p>
+ * </pre></blockquote>
  *
  * @author Mr.An
  * @since 2024/11/13

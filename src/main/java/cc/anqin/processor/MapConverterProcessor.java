@@ -27,7 +27,7 @@ import java.util.Set;
  * 该处理器负责在编译时处理{@link AutoToMap}注解，为标记的实体类自动生成对应的转换器实现类。
  * 生成的转换器类实现了{@link cc.anqin.processor.base.MappingConvert}接口，提供实体对象与Map之间的双向转换功能。
  * </p>
- * <p>
+ *
  * 处理流程：
  * <ol>
  *   <li>扫描源代码中标记了{@link AutoToMap}注解的类</li>
@@ -37,7 +37,7 @@ import java.util.Set;
  *       {@link cc.anqin.processor.annotation.IgnoreToMap}和{@link cc.anqin.processor.annotation.IgnoreToBean}注解</li>
  *   <li>生成的转换器类会被放置在{@code auto.mappings}包下，并在运行时自动注册到{@link ConvertMap}中</li>
  * </ol>
- * </p>
+ *
  *
  * @author Mr.An
  * @since 2024/11/18

@@ -46,22 +46,21 @@ under the License.
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
-    <servers>
-        <server>
-            <id>central</id>
-            <username>JKJnzA8+</username>
-            <password>HGGZSTNUdU0G6lJMdtZAj+ZsSmxKOTw2RqCihm9brGUi</password>
-        </server>
-    </servers>
+        <servers>
+            <server>
+                <id>central</id>
+                <username>uBFQUO</username>
+                <password>zGqeMWEmvSjQaCDccM45dpysKJof5Naht</password>
+            </server>
+        </servers>
 
-
-    <proxies>
-        <proxy>
-            <id>proxy</id> <!-- 代理的唯一标识 -->
-            <active>true</active> <!-- 是否启用代理 -->
-            <protocol>http</protocol> <!-- 代理协议，通常是 http 或 https -->
-            <host>127.0.0.1</host> <!-- 代理服务器地址 -->
-            <port>7890</port> <!-- 代理服务器端口 -->
-        </proxy>
-    </proxies>
+        <proxies>
+            <proxy>
+                <id>proxy</id>
+                <active>true</active>
+                <protocol>http</protocol>
+                <host>127.0.0.1</host>
+                <port>7890</port>
+            </proxy>
+        </proxies>
 </settings>

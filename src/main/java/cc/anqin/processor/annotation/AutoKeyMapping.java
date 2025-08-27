@@ -13,29 +13,28 @@ import java.lang.annotation.Target;
  * 该注解用于控制实体类字段与Map之间的映射关系。通过此注解，可以自定义字段在Map中的键名、
  * 控制映射方向（仅转为Map、仅转为Bean或双向），以及是否忽略该字段。
  * </p>
- * <p>
  * 示例：
- * <pre>
- * {@code
- * @AutoToMap
+ *
+ * <blockquote>
+ *  <pre>
+ * &#064;AutoToMap
  * public class User {
  *     // 使用自定义键名
- *     @AutoKeyMapping(target = "userName")
+ *     &#064;AutoKeyMapping(target  = "userName")
  *     private String name;
  *     
  *     // 仅在转为Map时使用
- *     @AutoKeyMapping(method = MappingEnum.TO_MAP)
+ *     &#064;AutoKeyMapping(method  = MappingEnum.TO_MAP)
  *     private String sensitiveData;
  *     
  *     // 忽略此字段
- *     @AutoKeyMapping(ignore = true)
+ *     &#064;AutoKeyMapping(ignore  = true)
  *     private String temporaryField;
  *     
  *     // Getters and setters
  * }
- * }
  * </pre>
- * </p>
+ * </blockquote>
  *
  * @author Mr.An
  * @since 2024/11/27
@@ -60,14 +59,12 @@ public @interface AutoKeyMapping {
 
     /**
      * 映射方向
-     * <p>
      * 控制字段参与的转换方向：
      * <ul>
      *   <li>{@link MappingEnum#ALL} - 字段同时参与对象到Map和Map到对象的转换</li>
      *   <li>{@link MappingEnum#TO_MAP} - 字段仅参与对象到Map的转换</li>
      *   <li>{@link MappingEnum#TO_BEAN} - 字段仅参与Map到对象的转换</li>
      * </ul>
-     * </p>
      *
      * @return 映射方向枚举值，默认为{@link MappingEnum#ALL}
      */
