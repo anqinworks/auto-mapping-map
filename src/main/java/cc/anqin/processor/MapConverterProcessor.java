@@ -17,27 +17,68 @@ import javax.tools.StandardLocation;
 import java.io.IOException;
 import java.io.Writer;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * <p>Map转换器处理器</p>
+ * Map转换器注解处理器
+ * <p>
+ * 该处理器负责在编译时处理{@link AutoToMap}注解，为标记的实体类自动生成对应的转换器实现类。
+ * 生成的转换器类实现了{@link cc.anqin.processor.base.MappingConvert}接口，提供实体对象与Map之间的双向转换功能。
+ * </p>
+ * <p>
+ * 处理流程：
+ * <ol>
+ *   <li>扫描源代码中标记了{@link AutoToMap}注解的类</li>
+ *   <li>为每个标记的类生成对应的转换器实现类</li>
+ *   <li>生成的转换器类包含toMap和toBean方法，实现对象与Map的双向转换</li>
+ *   <li>转换过程会考虑字段上的{@link cc.anqin.processor.annotation.AutoKeyMapping}、
+ *       {@link cc.anqin.processor.annotation.IgnoreToMap}和{@link cc.anqin.processor.annotation.IgnoreToBean}注解</li>
+ *   <li>生成的转换器类会被放置在{@code auto.mappings}包下，并在运行时自动注册到{@link ConvertMap}中</li>
+ * </ol>
+ * </p>
  *
  * @author Mr.An
  * @since 2024/11/18
+ * @see AutoToMap
+ * @see cc.anqin.processor.base.MappingConvert
+ * @see ConvertMap
  */
 @SupportedAnnotationTypes("cc.anqin.processor.annotation.AutoToMap")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class MapConverterProcessor extends AbstractProcessor {
 
-    // 保存所有生成的转换器信息
+    /**
+     * 转换器注册表
+     * <p>
+     * 用于保存所有生成的转换器信息，键为原始类的全限定名，值为生成的转换器类名。
+     * 此注册表用于生成元数据文件，便于运行时快速查找转换器。
+     * </p>
+     */
     private static final Map<String, String> converterRegistry = new HashMap<>();
 
-    /** 包前缀 */
+    /**
+     * 生成的转换器类的包前缀
+     * <p>
+     * 所有自动生成的转换器类都将被放置在此前缀指定的包下，以避免与用户代码冲突。
+     * 例如，对于类{@code com.example.User}，其转换器类的全限定名为
+     * {@code auto.mappings.com.example.User_MapConverter}。
+     * </p>
+     */
     public static final String PACKAGE_PREFIX = "auto.mappings.";
 
+    /**
+     * 处理注解
+     * <p>
+     * 实现AbstractProcessor的process方法，处理源代码中的{@link AutoToMap}注解。
+     * 对于每个标记了该注解的类，生成对应的转换器实现类，并将信息记录到注册表中。
+     * </p>
+     *
+     * @param annotations 要处理的注解类型集合
+     * @param roundEnv 当前轮次的环境信息，提供对被注解元素的访问
+     * @return 如果注解已被此处理器完全处理，则返回true；否则返回false
+     */
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         for (Element element : roundEnv.getElementsAnnotatedWith(AutoToMap.class)) {
@@ -62,6 +103,20 @@ public class MapConverterProcessor extends AbstractProcessor {
     }
 
 
+    /**
+     * 为给定的类型元素生成转换器实现类
+     * <p>
+     * 该方法负责为标记了{@link AutoToMap}注解的类生成对应的转换器实现类。
+     * 生成的类将实现{@link cc.anqin.processor.base.MappingConvert}接口，
+     * 并提供toMap和toBean方法的具体实现。
+     * </p>
+     * <p>
+     * 生成的类会被添加{@link cc.anqin.processor.annotation.Generated}注解，
+     * 包含生成器信息、生成时间、源类信息等元数据。
+     * </p>
+     *
+     * @param typeElement 要处理的类型元素，表示被{@link AutoToMap}注解标记的类
+     */
     private void generateMethod(TypeElement typeElement) {
         String className = ConvertMap.getConvertName(typeElement.getSimpleName().toString());
 
@@ -81,6 +136,7 @@ public class MapConverterProcessor extends AbstractProcessor {
 
 
         // 创建实现 MappingConvert 接口的类
+        assert className != null;
         TypeSpec mapConverterClass = TypeSpec.classBuilder(className)
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(componentAnnotation)
@@ -95,6 +151,21 @@ public class MapConverterProcessor extends AbstractProcessor {
         write(PACKAGE_PREFIX + packageName, mapConverterClass);
     }
 
+    /**
+     * 生成toMap方法的实现
+     * <p>
+     * 该方法负责生成将实体对象转换为Map的方法实现。生成的方法会：
+     * <ul>
+     *   <li>添加空值检查，当输入为null时返回空Map</li>
+     *   <li>创建一个新的HashMap实例用于存储转换结果</li>
+     *   <li>通过{@link CollectFields#toMapCollectFields}方法收集实体类的字段并生成转换代码</li>
+     * </ul>
+     * </p>
+     *
+     * @param typeElement 要处理的类型元素，表示需要生成转换方法的实体类
+     * @return 生成的toMap方法定义
+     * @see CollectFields#toMapCollectFields
+     */
     private MethodSpec toMap(TypeElement typeElement) {
         // 创建 toMap 方法
         MethodSpec.Builder toMapBuilder = MethodSpec.methodBuilder("toMap")
@@ -117,6 +188,21 @@ public class MapConverterProcessor extends AbstractProcessor {
         return toMapBuilder.build();
     }
 
+    /**
+     * 生成toBean方法的实现
+     * <p>
+     * 该方法负责生成将Map转换为实体对象的方法实现。生成的方法会：
+     * <ul>
+     *   <li>添加空值检查，当输入为空Map时返回新的实体实例</li>
+     *   <li>创建一个新的实体实例用于设置属性</li>
+     *   <li>通过{@link CollectFields#toBeanCollectFields}方法收集实体类的字段并生成转换代码</li>
+     * </ul>
+     * </p>
+     *
+     * @param typeElement 要处理的类型元素，表示需要生成转换方法的实体类
+     * @return 生成的toBean方法定义
+     * @see CollectFields#toBeanCollectFields
+     */
     private MethodSpec toBean(TypeElement typeElement) {
         TypeMirror targetType = typeElement.asType();
         // 创建 toBean 方法
@@ -141,6 +227,17 @@ public class MapConverterProcessor extends AbstractProcessor {
         return toBeanMethodBuilder.build();
     }
 
+    /**
+     * 将生成的类写入文件
+     * <p>
+     * 该方法负责将JavaPoet生成的类定义写入到Java源文件中。
+     * 使用处理器环境提供的Filer接口创建文件并写入内容。
+     * </p>
+     *
+     * @param packageName 生成的类所在的包名
+     * @param mapConverterClass 生成的类定义
+     * @throws RuntimeException 如果写入文件过程中发生IO异常
+     */
     private void write(String packageName, TypeSpec mapConverterClass) {
 
         // 写入 Java 文件
@@ -154,7 +251,22 @@ public class MapConverterProcessor extends AbstractProcessor {
     }
 
     /**
-     * 直接生成JSON注册文件
+     * 生成转换器注册表的JSON文件
+     * <p>
+     * 该方法负责将收集到的转换器信息写入到JSON格式的注册表文件中。
+     * 生成的文件位于META-INF目录下，命名为map-converter-registry.json，
+     * 用于在运行时快速查找和加载转换器实现类。
+     * </p>
+     * <p>
+     * JSON文件的格式为：
+     * <pre>
+     * {
+     *   "com.example.User": "auto.mappings.com.example.User_MapConverter",
+     *   "com.example.Order": "auto.mappings.com.example.Order_MapConverter"
+     * }
+     * </pre>
+     * 其中，键为原始类的全限定名，值为生成的转换器类的全限定名。
+     * </p>
      */
     private void generateJsonRegistryFile() {
         if (converterRegistry.isEmpty()) {
@@ -203,7 +315,14 @@ public class MapConverterProcessor extends AbstractProcessor {
     }
 
     /**
-     * JSON字符串转义
+     * 对JSON字符串进行转义处理
+     * <p>
+     * 该方法负责对字符串中的特殊字符进行转义，确保生成的JSON文件格式正确。
+     * 转义的字符包括：反斜杠、双引号、退格符、换页符、换行符、回车符和制表符。
+     * </p>
+     *
+     * @param input 需要转义的输入字符串
+     * @return 转义后的字符串，如果输入为null则返回空字符串
      */
     private String escapeJsonString(String input) {
         if (input == null) {

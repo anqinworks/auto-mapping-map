@@ -1,6 +1,7 @@
 package cc.anqin.processor.base;
 
 import cn.hutool.core.util.ClassUtil;
+import cn.hutool.core.util.StrUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,7 +10,16 @@ import java.util.stream.Collectors;
 /**
  * 映射转换工厂类
  *
- * <p>提供对象与Map之间的双向转换功能，基于预注册的转换器实现类型转换。</p>
+ * <p>提供对象与Map之间的双向转换功能，基于预注册的转换器实现类型转换。该工具类是整个映射框架的核心入口点，
+ * 负责管理和调用所有自动生成的转换器实现。</p>
+ *
+ * <p>转换器的注册过程：
+ * <ol>
+ *   <li>使用{@link cc.anqin.processor.annotation.AutoToMap}注解标记需要转换的实体类</li>
+ *   <li>编译时，注解处理器{@link cc.anqin.processor.MapConverterProcessor}自动生成转换器实现类</li>
+ *   <li>生成的转换器在类加载时自动注册到{@code CONVERT_MAP}中</li>
+ * </ol>
+ * </p>
  *
  * <p>使用示例：
  * <pre>{@code
@@ -23,24 +33,37 @@ import java.util.stream.Collectors;
  *
  * // 检查转换器是否存在
  * boolean exists = ConvertMap.exists(User.class);
+ *
+ * // 批量转换
+ * List<Map<String, Object>> mapList = ConvertMap.toMapList(userList);
+ * List<User> userList = ConvertMap.toBeanList(mapList, User.class);
  * }
  * </pre>
  * </p>
  *
  * @author Mr.An
  * @since 2024/11/18
+ * @see cc.anqin.processor.annotation.AutoToMap
+ * @see cc.anqin.processor.base.MappingConvert
  */
 public class ConvertMap {
 
     /**
-     * 类名后缀
+     * 转换器类名后缀
+     * <p>
+     * 用于构建转换器类的完整类名。例如，对于实体类{@code User}，
+     * 其对应的转换器类名为{@code User_MapConverter}。
+     * </p>
      */
     public static final String CLASS_SUFFIX = "_MapConverter";
 
     /**
      * 转换器映射表
-     *
-     * <p>存储类名与对应转换器的映射关系，线程安全且不可修改</p>
+     * <p>
+     * 存储类名与对应转换器实例的映射关系。该映射表在类加载时初始化，
+     * 通过扫描指定包路径下所有实现了{@link MappingConvert}接口的类来填充。
+     * 映射表是线程安全的，且初始化后不可修改。
+     * </p>
      */
     private static final Map<String, MappingConvert<?>> CONVERT_MAP;
 
@@ -92,7 +115,7 @@ public class ConvertMap {
      */
     public static Map<String, Object> toMap(Object source) {
         if (source == null) {
-            return null;
+            throw new IllegalArgumentException("源对象不能为null");
         }
         return toMap(source, source.getClass());
     }
@@ -110,9 +133,6 @@ public class ConvertMap {
         validateParameters(source, clazz);
 
         MappingConvert convert = getMappingConvert(clazz);
-        if (convert == null) {
-            throw new IllegalArgumentException("找不到类型 " + clazz.getName() + " 的转换器");
-        }
 
         return convert.toMap(source);
     }
@@ -130,9 +150,6 @@ public class ConvertMap {
         validateParameters(dataMap, clazz);
 
         MappingConvert<T> convert = getMappingConvert(clazz);
-        if (convert == null) {
-            throw new IllegalArgumentException("找不到类型 " + clazz.getName() + " 的转换器");
-        }
 
         return convert.toBean(dataMap);
     }
@@ -149,14 +166,19 @@ public class ConvertMap {
 
     /**
      * 批量转换对象列表到Map列表
+     * <p>
+     * 将给定的对象列表中的每个对象转换为对应的Map，并返回包含这些Map的列表。
+     * 转换过程使用{@link #toMap(Object)}方法，保持与单个对象转换的一致性。
+     * </p>
      *
-     * @param sources 源对象列表
+     * @param sources 需要转换的源对象列表
      * @param <T> 对象类型
-     * @return Map列表
+     * @return 转换后的Map列表，如果输入为null则返回null
+     * @see #toMap(Object)
      */
     public static <T> List<Map<String, Object>> toMapList(List<T> sources) {
         if (sources == null) {
-            return null;
+            throw new IllegalArgumentException("输入参数 sources 不能为 null");
         }
 
         return sources.stream()
@@ -166,16 +188,20 @@ public class ConvertMap {
 
     /**
      * 批量转换Map列表到对象列表
+     * <p>
+     * 将给定的Map列表中的每个Map转换为指定类型的对象，并返回包含这些对象的列表。
+     * 转换过程使用{@link #toBean(Map, Class)}方法，保持与单个Map转换的一致性。
+     * </p>
      *
-     * @param dataMaps Map列表
-     * @param clazz 目标类型
-     * @param <T> 目标类型
-     * @return 对象列表
+     * @param dataMaps 需要转换的Map列表
+     * @param clazz 目标对象类型的Class对象
+     * @param <T> 目标对象类型
+     * @return 转换后的对象列表，如果输入参数任一为null则返回null
+     * @throws IllegalArgumentException 如果找不到对应的转换器
+     * @see #toBean(Map, Class)
      */
     public static <T> List<T> toBeanList(List<Map<String, Object>> dataMaps, Class<T> clazz) {
-        if (dataMaps == null || clazz == null) {
-            return null;
-        }
+        validateParameters(dataMaps, clazz);
 
         return dataMaps.stream()
                 .map(map -> toBean(map, clazz))
@@ -184,15 +210,21 @@ public class ConvertMap {
 
     /**
      * 获取指定类型的转换器
+     * <p>
+     * 根据给定的类型获取对应的转换器实例。转换器的查找基于类名和{@link #CLASS_SUFFIX}构建的键名。
+     * 如果找不到对应的转换器，将抛出异常。此方法通常由框架内部调用，用户一般不需要直接使用。
+     * </p>
      *
      * @param <T> 目标类型
-     * @param clazz 目标类型
-     * @return 对应的转换器，如果不存在返回null
+     * @param clazz 目标类型的Class对象
+     * @return 对应类型的转换器实例
+     * @throws IllegalArgumentException 如果clazz为null或找不到对应的转换器
+     * @see #getConvertName(Class)
      */
     @SuppressWarnings("unchecked")
     public static <T> MappingConvert<T> getMappingConvert(Class<T> clazz) {
         if (clazz == null) {
-            return null;
+            throw new IllegalArgumentException("clazz不能为null");
         }
 
         String convertName = getConvertName(clazz);
@@ -207,8 +239,12 @@ public class ConvertMap {
 
     /**
      * 获取所有已注册的转换器名称
+     * <p>
+     * 返回当前已注册到系统中的所有转换器名称的不可修改集合。
+     * 此方法主要用于调试和诊断目的，可以帮助确认哪些转换器已被成功注册。
+     * </p>
      *
-     * @return 转换器名称集合
+     * @return 包含所有已注册转换器名称的不可修改集合
      */
     public static Set<String> getRegisteredConverterNames() {
         return Collections.unmodifiableSet(CONVERT_MAP.keySet());
@@ -216,9 +252,14 @@ public class ConvertMap {
 
     /**
      * 根据类获取转换器名称
+     * <p>
+     * 根据给定的类对象构建对应转换器的名称。转换器名称由类的简单名称加上{@link #CLASS_SUFFIX}组成。
+     * 例如，对于类{@code com.example.User}，其转换器名称为{@code User_MapConverter}。
+     * </p>
      *
-     * @param clazz 类
-     * @return 转换器名称
+     * @param clazz 需要获取转换器名称的类对象
+     * @return 对应的转换器名称
+     * @throws NullPointerException 如果clazz为null
      */
     public static String getConvertName(Class<?> clazz) {
         return clazz.getSimpleName() + CLASS_SUFFIX;
@@ -226,19 +267,30 @@ public class ConvertMap {
 
     /**
      * 根据类名获取转换器名称
+     * <p>
+     * 根据给定的类名字符串构建对应转换器的名称。转换器名称由类名加上{@link #CLASS_SUFFIX}组成。
+     * 例如，对于类名{@code User}，其转换器名称为{@code User_MapConverter}。
+     * </p>
      *
-     * @param className 类名
-     * @return 转换器名称
+     * @param className 类名字符串
+     * @return 对应的转换器名称
      */
     public static String getConvertName(String className) {
+        if(StrUtil.isBlank(className)) {
+            return null;
+        }
         return className + CLASS_SUFFIX;
     }
 
     /**
      * 验证参数是否有效
+     * <p>
+     * 检查给定的对象和类参数是否为null。如果任一参数为null，则抛出异常。
+     * 此方法用于在执行转换操作前进行参数验证，确保转换过程的安全性。
+     * </p>
      *
-     * @param obj 对象参数
-     * @param clazz 类参数
+     * @param obj 需要验证的对象参数
+     * @param clazz 需要验证的类参数
      * @throws IllegalArgumentException 如果任一参数为null
      */
     private static void validateParameters(Object obj, Class<?> clazz) {

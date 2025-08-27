@@ -15,20 +15,57 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 收集字段
+ * 字段收集工具类
+ * <p>
+ * 该工具类负责在代码生成过程中收集实体类的字段信息，并生成相应的转换代码。
+ * 主要用于支持{@link cc.anqin.processor.MapConverterProcessor}在生成转换器实现类时，
+ * 处理实体类字段与Map之间的映射关系。
+ * </p>
+ * <p>
+ * 该类提供了两个主要方法：
+ * <ul>
+ *   <li>{@link #toMapCollectFields} - 收集字段并生成对象到Map的转换代码</li>
+ *   <li>{@link #toBeanCollectFields} - 收集字段并生成Map到对象的转换代码</li>
+ * </ul>
+ * </p>
+ * <p>
+ * 在处理字段时，会考虑以下注解的影响：
+ * <ul>
+ *   <li>{@link AutoKeyMapping} - 控制字段映射方向和自定义键名</li>
+ *   <li>{@link IgnoreToMap} - 忽略字段在对象到Map的转换中</li>
+ *   <li>{@link IgnoreToBean} - 忽略字段在Map到对象的转换中</li>
+ * </ul>
+ * </p>
  *
  * @author Mr.An
  * @since 2025/03/06
+ * @see cc.anqin.processor.MapConverterProcessor
+ * @see AutoKeyMapping
+ * @see IgnoreToMap
+ * @see IgnoreToBean
  */
 public class CollectFields {
 
 
     /**
-     * 递归收集类及其父类的字段
+     * 递归收集类及其父类的字段，并生成对象到Map的转换代码
+     * <p>
+     * 该方法遍历给定类型及其所有父类的字段，为每个符合条件的字段生成从对象到Map的转换代码。
+     * 在处理过程中，会考虑字段上的{@link AutoKeyMapping}和{@link IgnoreToMap}注解，
+     * 以决定字段是否参与转换以及在Map中使用的键名。
+     * </p>
+     * <p>
+     * 生成的代码示例：
+     * <pre>
+     * {@code
+     * map.put("fieldName", entity.getFieldName());
+     * }
+     * </pre>
+     * </p>
      *
-     * @param typeElement   类型元素
-     * @param toMapBuilder  致地图构建者
-     * @param processingEnv 处理环境
+     * @param typeElement   要处理的类型元素
+     * @param toMapBuilder  用于构建toMap方法的JavaPoet方法构建器
+     * @param processingEnv 提供处理工具的环境
      */
     public static void toMapCollectFields(TypeElement typeElement, MethodSpec.Builder toMapBuilder, ProcessingEnvironment processingEnv) {
         // 获取当前类的字段
@@ -84,10 +121,24 @@ public class CollectFields {
     }
 
     /**
-     * 去收豆田
+     * 递归收集类及其父类的字段，并生成Map到对象的转换代码
+     * <p>
+     * 该方法遍历给定类型及其所有父类的字段，为每个符合条件的字段生成从Map到对象的转换代码。
+     * 在处理过程中，会考虑字段上的{@link AutoKeyMapping}和{@link IgnoreToBean}注解，
+     * 以决定字段是否参与转换以及从Map中获取值的键名。
+     * </p>
+     * <p>
+     * 生成的代码示例：
+     * <pre>
+     * {@code
+     * bean.setFieldName((FieldType) dataMap.get("fieldName"));
+     * }
+     * </pre>
+     * </p>
      *
-     * @param typeElement         类型元素
-     * @param toBeanMethodBuilder to bean方法生成器
+     * @param typeElement         要处理的类型元素
+     * @param toBeanMethodBuilder 用于构建toBean方法的JavaPoet方法构建器
+     * @param processingEnv       提供处理工具的环境
      */
     public static void toBeanCollectFields(TypeElement typeElement, MethodSpec.Builder toBeanMethodBuilder, ProcessingEnvironment processingEnv) {
 
