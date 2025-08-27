@@ -105,6 +105,7 @@ public class CollectFields {
                     continue;
                 }
 
+
                 // 检查字段是否被 @AutoKeyMapping 注解标记并获取目标名称
                 AutoKeyMapping annotation = field.getAnnotation(AutoKeyMapping.class);
 

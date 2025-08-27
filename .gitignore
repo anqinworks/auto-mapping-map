@@ -6,3 +6,4 @@ rebel.xml
 **/.idea
 **/target
 **/logs
+settings.xml

@@ -9,7 +9,6 @@ import java.util.Map;
  * @author Mr.An
  * @since 2024/11/13
  */
-
 public interface MappingConvert<T> {
 
     /**
@@ -26,6 +25,5 @@ public interface MappingConvert<T> {
      * @param dataMap 资料图
      * @return {@link T }
      */
-
     T toBean(Map<String, Object> dataMap);
 }

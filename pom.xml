@@ -6,7 +6,7 @@
     <artifactId>auto-mapping-map</artifactId>
     <groupId>io.github.anqinworks</groupId>
     <name>auto-mapping-map</name>
-    <version>3.6</version>
+    <version>3.7</version>
     <description>实体类（POJO）和 Map 之间的相互转换</description>
     <url>https://github.com/anqinworks/auto-mapping-map</url>
     <packaging>jar</packaging>
@@ -65,6 +65,20 @@
 
     <build>
         <plugins>
+            <!-- Maven Shade Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- Compiler -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

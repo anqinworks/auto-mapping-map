@@ -37,4 +37,18 @@ public @interface Generated {
      * @return 任何注释的占位符
      */
     String comments() default "";
+
+    /**
+     * 源
+     *
+     * @return {@link String }
+     */
+    String source() default "";
+
+    /**
+     * 存储 库
+     *
+     * @return {@link String }
+     */
+    String repository() default "";
 }
