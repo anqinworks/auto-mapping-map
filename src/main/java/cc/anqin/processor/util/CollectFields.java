@@ -4,7 +4,9 @@ import cc.anqin.processor.annotation.AutoKeyMapping;
 import cc.anqin.processor.annotation.IgnoreToBean;
 import cc.anqin.processor.annotation.IgnoreToMap;
 import cc.anqin.processor.enums.MappingEnum;
+import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.StrUtil;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 
@@ -81,6 +83,7 @@ public class CollectFields {
                     continue;
                 }
 
+
                 if (field.getAnnotation(IgnoreToMap.class) != null) {
                     continue;
                 }
@@ -108,7 +111,9 @@ public class CollectFields {
                 String getterName = "get" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
 
                 // 使用 getter 方法获取字段值并放入 Map
-                toMapBuilder.addStatement("map.put($S, entity.$L())", targetFieldName, getterName);
+                toMapBuilder.addCode("//  $L\n", fieldName);
+                toMapBuilder.addStatement("map.put( $S , entity.$L() )", targetFieldName, getterName);
+                toMapBuilder.addCode("\n");
             }
         }
 
@@ -121,6 +126,7 @@ public class CollectFields {
             }
         }
     }
+
 
     /**
      * 递归收集类及其父类的字段，并生成Map到对象的转换代码
@@ -175,7 +181,33 @@ public class CollectFields {
 
                 // 生成 set 方法调用
                 String setMethodName = "set" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-                toBeanMethodBuilder.addStatement("bean.$L(($T) dataMap.get(\"$L\"))", setMethodName, fieldType, fieldName);
+
+                toBeanMethodBuilder.addCode("//  $L\n", fieldName);
+                toBeanMethodBuilder.addCode("\n");
+
+                toBeanMethodBuilder.addStatement("Object $LValue = dataMap.get(\"$L\")", fieldName, fieldName);
+                toBeanMethodBuilder.addCode("\n");
+
+                toBeanMethodBuilder.addCode("if ($LValue != null) {\n", fieldName);
+
+                if (fieldType.toString().contains("<") || fieldType.toString().contains(">")) {
+
+                    toBeanMethodBuilder.addCode("    bean.$L( $T.convert(new $T<$T>() {}, $LValue) );\n",
+                            setMethodName,
+                            ClassName.get("cn.hutool.core.convert", "Convert"),
+                            ClassName.get("cn.hutool.core.lang", "TypeReference"),
+                            fieldType,
+                            fieldName);
+                } else {
+                    toBeanMethodBuilder.addCode("    bean.$L( $T.convert($T.class, $LValue) );\n",
+                            setMethodName,
+                            ClassName.get("cn.hutool.core.convert", "Convert"),
+                            fieldType,
+                            fieldName);
+                }
+
+                toBeanMethodBuilder.addCode("}\n");
+                toBeanMethodBuilder.addCode("\n");
             }
         }
 

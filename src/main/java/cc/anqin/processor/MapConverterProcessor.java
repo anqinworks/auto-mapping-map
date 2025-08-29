@@ -3,6 +3,9 @@ package cc.anqin.processor;
 import cc.anqin.processor.annotation.AutoToMap;
 import cc.anqin.processor.base.ConvertMap;
 import cc.anqin.processor.util.CollectFields;
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.convert.Convert;
+import cn.hutool.core.lang.Dict;
 import com.squareup.javapoet.*;
 
 import javax.annotation.processing.*;
@@ -135,6 +138,7 @@ public class MapConverterProcessor extends AbstractProcessor {
                 .build();
 
 
+
         // 创建实现 MappingConvert 接口的类
         assert className != null;
         TypeSpec mapConverterClass = TypeSpec.classBuilder(className)
@@ -149,6 +153,13 @@ public class MapConverterProcessor extends AbstractProcessor {
                 .build();
 
         write(PACKAGE_PREFIX + packageName, mapConverterClass);
+    }
+
+    public static void main(String[] args) {
+        Dict dict = Dict.of();
+
+        dict.getDouble("q");
+
     }
 
     /**
@@ -174,7 +185,7 @@ public class MapConverterProcessor extends AbstractProcessor {
                 .returns(ParameterizedTypeName.get(Map.class, String.class, Object.class))
                 .addParameter(TypeName.get(typeElement.asType()), "entity")
                 .beginControlFlow("if (entity == null)") // 添加空检查
-                .addStatement("return $T.emptyMap()", ClassName.get("java.util", "Collections")) // 如果 dataMap 为空，返回新实例
+                .addStatement("    return $T.emptyMap()", ClassName.get("java.util", "Collections")) // 如果 dataMap 为空，返回新实例
                 .endControlFlow();
 
         // 初始化 Map
@@ -212,7 +223,7 @@ public class MapConverterProcessor extends AbstractProcessor {
                 .addParameter(ParameterizedTypeName.get(Map.class, String.class, Object.class), "dataMap")
                 .returns(TypeVariableName.get(targetType))
                 .beginControlFlow("if ($T.isEmpty(dataMap))", ClassName.get("cn.hutool.core.collection", "CollUtil")) // 添加空检查
-                .addStatement("return new $T()", targetType) // 如果 dataMap 为空，返回新实例
+                .addStatement("    return new $T()", targetType) // 如果 dataMap 为空，返回新实例
                 .endControlFlow()
                 .addStatement("$T bean = new $T()", targetType, targetType); // 初始化 Bean
 
