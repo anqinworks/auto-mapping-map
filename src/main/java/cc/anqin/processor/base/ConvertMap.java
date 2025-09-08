@@ -1,5 +1,6 @@
 package cc.anqin.processor.base;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.StrUtil;
 
@@ -149,6 +150,33 @@ public class ConvertMap {
         return convert.toBean(dataMap);
     }
 
+
+    /**
+     * 将Map转换为指定类型的对象
+     *
+     * @param dataMap 包含数据的Map，不能为null
+     * @param clazz 目标类型，不能为null
+     * @param defaultClazz 默认 clazz
+     * @return 转换后的对象
+     *
+     */
+    public static <T> T toBean(Map<String, Object> dataMap, Class<T> clazz, Class<?> defaultClazz) {
+        if (dataMap == null) {
+            throw new IllegalArgumentException("源对象不能为null");
+        }
+        if (exists(clazz)) {
+            return getMappingConvert(clazz).toBean(dataMap);
+        }
+
+        if (nonExists(defaultClazz)) {
+            throw new IllegalArgumentException("目标 clazz 为空，且 defaultClazz 不存在: " + defaultClazz);
+        }
+        @SuppressWarnings("unchecked")
+        T bean = (T) getMappingConvert(defaultClazz).toBean(dataMap);
+        return bean;
+
+    }
+
     /**
      * 检查指定类型是否存在对应的转换器
      *
@@ -158,6 +186,17 @@ public class ConvertMap {
     public static boolean exists(Class<?> clazz) {
         return clazz != null && CONVERT_MAP.containsKey(getConvertName(clazz));
     }
+
+    /**
+     * 检查指定类型是否存在对应的转换器
+     *
+     * @param clazz 要检查的类型
+     * @return 如果存在对应的转换器返回true，否则返回false
+     */
+    public static boolean nonExists(Class<?> clazz) {
+        return !exists(clazz);
+    }
+
 
     /**
      * 批量转换对象列表到Map列表
@@ -271,7 +310,7 @@ public class ConvertMap {
      * @return 对应的转换器名称
      */
     public static String getConvertName(String className) {
-        if(StrUtil.isBlank(className)) {
+        if (StrUtil.isBlank(className)) {
             return null;
         }
         return className + CLASS_SUFFIX;
@@ -292,8 +331,8 @@ public class ConvertMap {
         if (obj == null) {
             throw new IllegalArgumentException("源对象不能为null");
         }
-        if (clazz == null) {
-            throw new IllegalArgumentException("目标类型不能为null");
+        if (nonExists(clazz)) {
+            throw new IllegalArgumentException("目标类型不存在：" + clazz);
         }
     }
 }
