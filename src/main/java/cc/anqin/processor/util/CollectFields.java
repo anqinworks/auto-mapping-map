@@ -4,6 +4,7 @@ import cc.anqin.processor.annotation.AutoKeyMapping;
 import cc.anqin.processor.annotation.IgnoreToBean;
 import cc.anqin.processor.annotation.IgnoreToMap;
 import cc.anqin.processor.enums.MappingEnum;
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.StrUtil;
 import com.squareup.javapoet.ClassName;
@@ -71,12 +72,17 @@ public class CollectFields {
      * @param toMapBuilder  用于构建toMap方法的JavaPoet方法构建器
      * @param processingEnv 提供处理工具的环境
      */
-    public static void toMapCollectFields(TypeElement typeElement, MethodSpec.Builder toMapBuilder, ProcessingEnvironment processingEnv) {
+    public static void toMapCollectFields(TypeElement typeElement, MethodSpec.Builder toMapBuilder, ProcessingEnvironment processingEnv, String[] excludeFields) {
         // 获取当前类的字段
+        List<String> excludeFieldList = ListUtil.of(excludeFields);
         List<? extends Element> enclosedElements = typeElement.getEnclosedElements();
         for (Element enclosed : enclosedElements) {
             if (enclosed instanceof VariableElement) {
                 VariableElement field = (VariableElement) enclosed;
+
+                if (excludeFieldList.contains(field.getSimpleName().toString())) {
+                    continue;
+                }
 
                 // 跳过 final 字段
                 if (field.getModifiers().contains(Modifier.FINAL)) {
@@ -93,8 +99,8 @@ public class CollectFields {
 
                 // 跳过被标记为忽略的字段
                 if (annotation != null
-                        && annotation.ignore()
-                        && (MappingEnum.ALL.equals(annotation.method())
+                    && annotation.ignore()
+                    && (MappingEnum.ALL.equals(annotation.method())
                         || MappingEnum.TO_MAP.equals(annotation.method()))) {
                     continue;
                 }
@@ -122,7 +128,7 @@ public class CollectFields {
         if (superclass != null && !superclass.toString().equals("java.lang.Object")) {
             Element superElement = processingEnv.getTypeUtils().asElement(superclass);
             if (superElement instanceof TypeElement) {
-                toMapCollectFields((TypeElement) superElement, toMapBuilder, processingEnv);
+                toMapCollectFields((TypeElement) superElement, toMapBuilder, processingEnv,excludeFields);
             }
         }
     }
@@ -148,12 +154,17 @@ public class CollectFields {
      * @param toBeanMethodBuilder 用于构建toBean方法的JavaPoet方法构建器
      * @param processingEnv       提供处理工具的环境
      */
-    public static void toBeanCollectFields(TypeElement typeElement, MethodSpec.Builder toBeanMethodBuilder, ProcessingEnvironment processingEnv) {
+    public static void toBeanCollectFields(TypeElement typeElement, MethodSpec.Builder toBeanMethodBuilder, ProcessingEnvironment processingEnv,String[] excludeFields) {
 
+        List<String> excludeFieldsList = ListUtil.of(excludeFields);
         // 动态生成 set 方法调用
         for (Element element : typeElement.getEnclosedElements()) {
             if (element.getKind() == ElementKind.FIELD) { // 只处理字段
                 VariableElement field = (VariableElement) element;
+
+                if (excludeFieldsList.contains(field.getSimpleName().toString())){
+                    continue;
+                }
 
                 // 跳过 final 字段
                 if (field.getModifiers().contains(Modifier.FINAL)) {
@@ -170,8 +181,8 @@ public class CollectFields {
 
                 // 跳过被标记为忽略的字段
                 if (annotation != null
-                        && annotation.ignore()
-                        && (MappingEnum.ALL.equals(annotation.method())
+                    && annotation.ignore()
+                    && (MappingEnum.ALL.equals(annotation.method())
                         || MappingEnum.TO_BEAN.equals(annotation.method()))) {
                     continue;
                 }
@@ -216,7 +227,7 @@ public class CollectFields {
         if (superclass != null && !superclass.toString().equals("java.lang.Object")) {
             Element superElement = processingEnv.getTypeUtils().asElement(superclass);
             if (superElement instanceof TypeElement) {
-                toBeanCollectFields((TypeElement) superElement, toBeanMethodBuilder, processingEnv);
+                toBeanCollectFields((TypeElement) superElement, toBeanMethodBuilder, processingEnv,excludeFields);
             }
         }
     }
