@@ -13,21 +13,20 @@ import java.lang.annotation.Target;
  * 通常用于排除不需要反序列化的字段、计算属性或由其他逻辑控制的字段。
  * </p>
  * 示例：
- * <blockquote>
- *     <pre>
  *
- * &#064;AutoToMap
+ * <pre>{@code
+ * @AutoToMap
  * public class User {
  *     private String name;
- *     
- *     &#064;IgnoreToBean
+ *
+ *     @IgnoreToBean
  *     private String calculatedField; // 此字段在Map转换为实体时将被忽略
- *     
+ *
  *     // Getters and setters
  * }
  *
- * </pre>
- * </blockquote>
+ * }</pre>
+ *
  *
  * @author Mr.An
  * @since 2025/03/06

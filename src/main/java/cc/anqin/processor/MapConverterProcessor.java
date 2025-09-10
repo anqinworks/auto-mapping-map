@@ -3,8 +3,6 @@ package cc.anqin.processor;
 import cc.anqin.processor.annotation.AutoToMap;
 import cc.anqin.processor.base.ConvertMap;
 import cc.anqin.processor.util.CollectFields;
-import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.convert.Convert;
 import cn.hutool.core.lang.Dict;
 import com.squareup.javapoet.*;
 
@@ -153,13 +151,6 @@ public class MapConverterProcessor extends AbstractProcessor {
                 .build();
 
         write(PACKAGE_PREFIX + packageName, mapConverterClass);
-    }
-
-    public static void main(String[] args) {
-        Dict dict = Dict.of();
-
-        dict.getDouble("q");
-
     }
 
     /**

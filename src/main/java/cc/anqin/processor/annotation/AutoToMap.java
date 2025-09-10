@@ -17,17 +17,17 @@ import java.lang.annotation.Target;
  * 可以通过{@link AutoKeyMapping}、{@link IgnoreToMap}和{@link IgnoreToBean}注解进一步控制字段的映射行为。
  * </p>
  * 示例：
- * <blockquote>
- * <pre>
  *
- * &#064;AutoToMap
+ * <pre>{@code
+ *
+ * @AutoToMap
  * public class User {
  *     private String name;
  *     private int age;
  *     
  *     // Getters and setters
  * }
- * </pre></blockquote>
+ * }</pre>
  *
  * @author Mr.An
  * @since 2024/11/13
