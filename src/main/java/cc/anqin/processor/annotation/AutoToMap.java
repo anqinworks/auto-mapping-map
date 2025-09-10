@@ -37,23 +37,9 @@ import java.lang.annotation.Target;
  * @see IgnoreToMap
  * @see IgnoreToBean
  */
-@Retention(RetentionPolicy.CLASS)
+@Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
-@AutoToMapCompiler
 public @interface AutoToMap {
 
 
-    /**
-     * 映射,目标类必须添加@AutoToMap注解
-     *
-     * @return {@link Class }<{@link ? }>
-     */
-    Class<?> mapping() default Object.class;
-
-    /**
-     * 排除字段
-     *
-     * @return {@link String[] }
-     */
-    String[] exclude() default {};
 }

@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
  * @author Mr.An
  * @since 2024/11/18
  * @see cc.anqin.processor.annotation.AutoToMap
- * @see cc.anqin.processor.base.MappingConvert
+ * @see MappingConvert
  */
 public class ConvertMap {
 
