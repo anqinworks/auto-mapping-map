@@ -3,7 +3,7 @@ package cc.anqin.processor;
 import cc.anqin.processor.annotation.AutoToMap;
 import cc.anqin.processor.base.ConvertMap;
 import cc.anqin.processor.util.CollectFields;
-import cn.hutool.core.lang.Dict;
+import cc.anqin.processor.util.ConfigLoader;
 import com.squareup.javapoet.*;
 
 import javax.annotation.processing.*;
@@ -21,6 +21,9 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import static cc.anqin.processor.util.ConfigLoader.PACKAGE_PREFIX;
+
 
 /**
  * Map转换器注解处理器
@@ -59,15 +62,7 @@ public class MapConverterProcessor extends AbstractProcessor {
      */
     private static final Map<String, String> converterRegistry = new HashMap<>();
 
-    /**
-     * 生成的转换器类的包前缀
-     * <p>
-     * 所有自动生成的转换器类都将被放置在此前缀指定的包下，以避免与用户代码冲突。
-     * 例如，对于类{@code com.example.User}，其转换器类的全限定名为
-     * {@code auto.mappings.com.example.User_MapConverter}。
-     * </p>
-     */
-    public static final String PACKAGE_PREFIX = "auto.mappings.";
+
 
     /**
      * 处理注解
@@ -134,7 +129,6 @@ public class MapConverterProcessor extends AbstractProcessor {
                 .addMember("repository", "$S", "https://github.com/anqinworks/auto-mapping-map")
                 .addMember("source", "$S", typeElement.getQualifiedName().toString())
                 .build();
-
 
 
         // 创建实现 MappingConvert 接口的类
@@ -300,7 +294,7 @@ public class MapConverterProcessor extends AbstractProcessor {
             FileObject fileObject = filer.createResource(
                     StandardLocation.CLASS_OUTPUT,
                     "",
-                    "META-INF/map-converter-registry.json"
+                    ConfigLoader.CONFIG_FILE_PATH
             );
 
             try (Writer writer = fileObject.openWriter()) {

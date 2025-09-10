@@ -1,9 +1,14 @@
 package cc.anqin.processor.base;
 
-import cn.hutool.core.util.ClassUtil;
+import cc.anqin.processor.util.ConfigLoader;
+import cn.hutool.core.date.StopWatch;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.log.Log;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +48,9 @@ import java.util.stream.Collectors;
  */
 public class ConvertMap {
 
+    /** 日志 */
+    private static final Log log = Log.get(ConvertMap.class);
+
     /**
      * 转换器类名后缀
      * <p>
@@ -56,28 +64,25 @@ public class ConvertMap {
      * 转换器映射表
      * <p>
      * 存储类名与对应转换器实例的映射关系。该映射表在类加载时初始化，
-     * 通过扫描指定包路径下所有实现了{@link MappingConvert}接口的类来填充。
+     * 通过文件配置或包扫描方式加载所有实现了{@link MappingConvert}接口的类来填充。
      * 映射表是线程安全的，且初始化后不可修改。
+     * </p>
+     * <p>
+     * 加载策略：优先使用文件配置方式（高性能），失败时降级到包扫描方式（兼容性），
+     * 最终失败时使用空映射保障系统可用性。
      * </p>
      */
     private static final Map<String, MappingConvert<?>> CONVERT_MAP;
 
-    // 静态初始化块，加载所有转换器
     static {
-        // 1. 扫描指定包下所有实现了MappingConvert接口的类
-        Set<Class<?>> classes = ClassUtil.scanPackageBySuper("auto.mappings", MappingConvert.class);
+        long startTime = System.currentTimeMillis();
 
-        // 2. 创建转换器实例并构建不可修改的映射表
-        Map<String, MappingConvert<?>> dataMap = classes.stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(
-                        Class::getSimpleName,
-                        ConvertMap::createConverterInstance,
-                        (existing, replacement) -> existing // 重复键处理策略：保留现有值
-                ));
+        CONVERT_MAP = ConfigLoader.scanLoadAllConfigsAsSingleMap();
 
-        CONVERT_MAP = Collections.unmodifiableMap(dataMap);
+        log.info("转换器初始化总耗时: {}ms", System.currentTimeMillis() - startTime);
     }
+
+
 
     /**
      * 私有构造函数防止实例化
@@ -86,20 +91,6 @@ public class ConvertMap {
         throw new UnsupportedOperationException("ConvertMap是一个工具类，不能被实例化");
     }
 
-    /**
-     * 创建转换器实例
-     *
-     * @param clazz 转换器类
-     * @return 转换器实例
-     * @throws RuntimeException 当实例创建失败时抛出
-     */
-    private static MappingConvert<?> createConverterInstance(Class<?> clazz) {
-        try {
-            return (MappingConvert<?>) clazz.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException("创建转换器实例失败: " + clazz.getName(), e);
-        }
-    }
 
     /**
      * 将对象转换为Map
@@ -109,9 +100,6 @@ public class ConvertMap {
      * @throws IllegalArgumentException 如果找不到对应的转换器
      */
     public static Map<String, Object> toMap(Object source) {
-        if (source == null) {
-            throw new IllegalArgumentException("源对象不能为null");
-        }
         return toMap(source, source.getClass());
     }
 
@@ -123,12 +111,33 @@ public class ConvertMap {
      * @return 包含对象属性的Map
      * @throws IllegalArgumentException 如果参数为null或找不到对应的转换器
      */
-    @SuppressWarnings("all")
     public static Map<String, Object> toMap(Object source, Class<?> clazz) {
-        validateParameters(source, clazz);
+        return toMap(source, clazz, null);
+    }
 
-        MappingConvert convert = getMappingConvert(clazz);
+    /**
+     * 将对象转换为Map
+     *
+     * @param source 源对象，不能为null
+     * @param clazz 对象类型，为null 的时候执行 defaultClazz
+     * @param defaultClazz 默认 clazz
+     * @return 包含对象属性的Map
+     *
+     */
+    @SuppressWarnings("all")
+    public static Map<String, Object> toMap(Object source, Class<?> clazz, Class<?> defaultClazz) {
+        if (source == null) {
+            throw new IllegalArgumentException("源对象不能为null");
+        }
+        if (exists(clazz)) {
+            MappingConvert convert = getMappingConvert(clazz);
+            return convert.toMap(source);
+        }
 
+        if (nonExists(defaultClazz)) {
+            throw new IllegalArgumentException("目标 clazz 为空，且 defaultClazz 不存在: " + defaultClazz);
+        }
+        MappingConvert convert = getMappingConvert(defaultClazz);
         return convert.toMap(source);
     }
 
@@ -142,11 +151,7 @@ public class ConvertMap {
      * @throws IllegalArgumentException 如果参数为null或找不到对应的转换器
      */
     public static <T> T toBean(Map<String, Object> dataMap, Class<T> clazz) {
-        validateParameters(dataMap, clazz);
-
-        MappingConvert<T> convert = getMappingConvert(clazz);
-
-        return convert.toBean(dataMap);
+        return toBean(dataMap, clazz, null);
     }
 
 
@@ -183,7 +188,7 @@ public class ConvertMap {
      * @return 如果存在对应的转换器返回true，否则返回false
      */
     public static boolean exists(Class<?> clazz) {
-        return clazz != null && CONVERT_MAP.containsKey(getConvertName(clazz));
+        return clazz != null && CONVERT_MAP.containsKey(clazz.getName());
     }
 
     /**
@@ -234,7 +239,12 @@ public class ConvertMap {
      * @see #toBean(Map, Class)
      */
     public static <T> List<T> toBeanList(List<Map<String, Object>> dataMaps, Class<T> clazz) {
-        validateParameters(dataMaps, clazz);
+        if (dataMaps == null) {
+            throw new IllegalArgumentException("输入参数 dataMaps 不能为 null");
+        }
+        if (clazz == null) {
+            throw new IllegalArgumentException("输入参数 clazz 不能为 null");
+        }
 
         return dataMaps.stream()
                 .map(map -> toBean(map, clazz))
@@ -243,16 +253,11 @@ public class ConvertMap {
 
     /**
      * 获取指定类型的转换器
-     * <p>
-     * 根据给定的类型获取对应的转换器实例。转换器的查找基于类名和{@link #CLASS_SUFFIX}构建的键名。
-     * 如果找不到对应的转换器，将抛出异常。此方法通常由框架内部调用，用户一般不需要直接使用。
-     * </p>
      *
      * @param <T> 目标类型
      * @param clazz 目标类型的Class对象
      * @return 对应类型的转换器实例
      * @throws IllegalArgumentException 如果clazz为null或找不到对应的转换器
-     * @see #getConvertName(Class)
      */
     @SuppressWarnings("unchecked")
     public static <T> MappingConvert<T> getMappingConvert(Class<T> clazz) {
@@ -260,8 +265,7 @@ public class ConvertMap {
             throw new IllegalArgumentException("clazz不能为null");
         }
 
-        String convertName = getConvertName(clazz);
-        MappingConvert<?> converter = CONVERT_MAP.get(convertName);
+        MappingConvert<?> converter = CONVERT_MAP.get(clazz.getName());
 
         if (converter == null) {
             throw new IllegalArgumentException("找不到类型 " + clazz.getName() + " 的转换器");
@@ -269,6 +273,16 @@ public class ConvertMap {
 
         return (MappingConvert<T>) converter;
     }
+
+    /**
+     * 获取所有注册的转换器
+     *
+     * @return 包含所有已注册转换器名称的不可修改集合
+     */
+    public static Map<String, MappingConvert<?>> getRegisteredMap() {
+        return CONVERT_MAP;
+    }
+
 
     /**
      * 获取所有已注册的转换器名称
@@ -314,26 +328,4 @@ public class ConvertMap {
         }
         return className + CLASS_SUFFIX;
     }
-
-    /**
-     * 验证参数是否有效
-     * <p>
-     * 检查给定的对象和类参数是否为null。如果任一参数为null，则抛出异常。
-     * 此方法用于在执行转换操作前进行参数验证，确保转换过程的安全性。
-     * </p>
-     *
-     * @param obj 需要验证的对象参数
-     * @param clazz 需要验证的类参数
-     * @throws IllegalArgumentException 如果任一参数为null
-     */
-    private static void validateParameters(Object obj, Class<?> clazz) {
-        if (obj == null) {
-            throw new IllegalArgumentException("源对象不能为null");
-        }
-        if (nonExists(clazz)) {
-            throw new IllegalArgumentException("目标类型不存在：" + clazz);
-        }
-    }
-
-
 }
