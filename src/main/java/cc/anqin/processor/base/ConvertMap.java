@@ -1,20 +1,15 @@
 package cc.anqin.processor.base;
 
-import cn.hutool.core.io.resource.ResourceUtil;
-import cn.hutool.core.lang.TypeReference;
-import cn.hutool.core.map.MapUtil;
-import cn.hutool.core.util.ClassUtil;
+import cc.anqin.processor.util.ConfigLoader;
+import cn.hutool.core.date.StopWatch;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
 import cn.hutool.log.Log;
-import cn.hutool.log.LogFactory;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
-
-import static cc.anqin.processor.constant.Constant.REGISTRY_PATH;
 
 /**
  * 映射转换工厂类
@@ -53,45 +48,40 @@ import static cc.anqin.processor.constant.Constant.REGISTRY_PATH;
  */
 public class ConvertMap {
 
+    /** 日志 */
+    private static final Log log = Log.get(ConvertMap.class);
 
-    private static final Log log = LogFactory.get();
+    /**
+     * 转换器类名后缀
+     * <p>
+     * 用于构建转换器类的完整类名。例如，对于实体类{@code User}，
+     * 其对应的转换器类名为{@code User_MapConverter}。
+     * </p>
+     */
+    public static final String CLASS_SUFFIX = "_MapConverter";
 
     /**
      * 转换器映射表
      * <p>
      * 存储类名与对应转换器实例的映射关系。该映射表在类加载时初始化，
-     * 通过扫描指定包路径下所有实现了{@link MappingConvert}接口的类来填充。
+     * 通过文件配置或包扫描方式加载所有实现了{@link MappingConvert}接口的类来填充。
      * 映射表是线程安全的，且初始化后不可修改。
      * </p>
+     * <p>
+     * 加载策略：优先使用文件配置方式（高性能），失败时降级到包扫描方式（兼容性），
+     * 最终失败时使用空映射保障系统可用性。
+     * </p>
      */
-    private static final Map<String, MappingConvert<?>> CONVERT_MAP = Collections.unmodifiableMap(loadRegistry());
+    private static final Map<String, MappingConvert<?>> CONVERT_MAP;
 
+    static {
+        long startTime = System.currentTimeMillis();
 
-    /**
-     * 加载注册表
-     *
-     * @return {@link Map }<{@link String }, {@link MappingConvert }<{@link ? }>>
-     */
-    private static Map<String, MappingConvert<?>> loadRegistry() {
+        CONVERT_MAP = ConfigLoader.scanLoadAllConfigsAsSingleMap();
 
-        String json = ResourceUtil.readUtf8Str(REGISTRY_PATH);
-
-        if (StrUtil.isBlank(json)) {
-            log.warn("Registry file is empty: {}", REGISTRY_PATH);
-            return Collections.emptyMap();
-        }
-
-        Map<String, String> dataMap = JSONUtil.toBean(json, new TypeReference<Map<String, String>>() {
-        }, true);
-
-        return MapUtil.map(dataMap, (k, v) -> {
-            try {
-                return (MappingConvert<?>) ClassUtil.loadClass(v).newInstance();
-            } catch (Exception e) {
-                throw new RuntimeException("创建转换器实例失败: " + v, e);
-            }
-        });
+        log.info("转换器初始化总耗时: {}ms", System.currentTimeMillis() - startTime);
     }
+
 
 
     /**
@@ -249,7 +239,12 @@ public class ConvertMap {
      * @see #toBean(Map, Class)
      */
     public static <T> List<T> toBeanList(List<Map<String, Object>> dataMaps, Class<T> clazz) {
-        validateParameters(dataMaps, clazz);
+        if (dataMaps == null) {
+            throw new IllegalArgumentException("输入参数 dataMaps 不能为 null");
+        }
+        if (clazz == null) {
+            throw new IllegalArgumentException("输入参数 clazz 不能为 null");
+        }
 
         return dataMaps.stream()
                 .map(map -> toBean(map, clazz))
@@ -290,22 +285,47 @@ public class ConvertMap {
 
 
     /**
-     * 验证参数是否有效
+     * 获取所有已注册的转换器名称
      * <p>
-     * 检查给定的对象和类参数是否为null。如果任一参数为null，则抛出异常。
-     * 此方法用于在执行转换操作前进行参数验证，确保转换过程的安全性。
+     * 返回当前已注册到系统中的所有转换器名称的不可修改集合。
+     * 此方法主要用于调试和诊断目的，可以帮助确认哪些转换器已被成功注册。
      * </p>
      *
-     * @param obj 需要验证的对象参数
-     * @param clazz 需要验证的类参数
-     * @throws IllegalArgumentException 如果任一参数为null
+     * @return 包含所有已注册转换器名称的不可修改集合
      */
-    private static void validateParameters(Object obj, Class<?> clazz) {
-        if (obj == null) {
-            throw new IllegalArgumentException("源对象不能为null");
+    public static Set<String> getRegisteredConverterNames() {
+        return Collections.unmodifiableSet(CONVERT_MAP.keySet());
+    }
+
+    /**
+     * 根据类获取转换器名称
+     * <p>
+     * 根据给定的类对象构建对应转换器的名称。转换器名称由类的简单名称加上{@link #CLASS_SUFFIX}组成。
+     * 例如，对于类{@code com.example.User}，其转换器名称为{@code User_MapConverter}。
+     * </p>
+     *
+     * @param clazz 需要获取转换器名称的类对象
+     * @return 对应的转换器名称
+     * @throws NullPointerException 如果clazz为null
+     */
+    public static String getConvertName(Class<?> clazz) {
+        return clazz.getSimpleName() + CLASS_SUFFIX;
+    }
+
+    /**
+     * 根据类名获取转换器名称
+     * <p>
+     * 根据给定的类名字符串构建对应转换器的名称。转换器名称由类名加上{@link #CLASS_SUFFIX}组成。
+     * 例如，对于类名{@code User}，其转换器名称为{@code User_MapConverter}。
+     * </p>
+     *
+     * @param className 类名字符串
+     * @return 对应的转换器名称
+     */
+    public static String getConvertName(String className) {
+        if (StrUtil.isBlank(className)) {
+            return null;
         }
-        if (nonExists(clazz)) {
-            throw new IllegalArgumentException("目标类型不存在：" + clazz);
-        }
+        return className + CLASS_SUFFIX;
     }
 }

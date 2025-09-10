@@ -1,19 +1,16 @@
 package cc.anqin.processor;
 
+import cc.anqin.processor.annotation.AutoToMap;
+import cc.anqin.processor.base.ConvertMap;
 import cc.anqin.processor.util.CollectFields;
-import cn.hutool.core.lang.Opt;
-import cn.hutool.core.lang.Pair;
-import cn.hutool.core.util.StrUtil;
-import cn.hutool.log.Log;
-import cn.hutool.log.LogFactory;
+import cc.anqin.processor.util.ConfigLoader;
 import com.squareup.javapoet.*;
 
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
+import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.*;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import javax.tools.FileObject;
@@ -21,29 +18,75 @@ import javax.tools.StandardLocation;
 import java.io.IOException;
 import java.io.Writer;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
-import static cc.anqin.processor.constant.Constant.GENERATE_NAME_SUFFIX;
-import static cc.anqin.processor.constant.Constant.PACKAGE_PREFIX;
+import static cc.anqin.processor.util.ConfigLoader.PACKAGE_PREFIX;
 
 
-@SupportedAnnotationTypes("*")
+/**
+ * Map转换器注解处理器
+ * <p>
+ * 该处理器负责在编译时处理{@link AutoToMap}注解，为标记的实体类自动生成对应的转换器实现类。
+ * 生成的转换器类实现了{@link cc.anqin.processor.base.MappingConvert}接口，提供实体对象与Map之间的双向转换功能。
+ * </p>
+ *
+ * 处理流程：
+ * <ol>
+ *   <li>扫描源代码中标记了{@link AutoToMap}注解的类</li>
+ *   <li>为每个标记的类生成对应的转换器实现类</li>
+ *   <li>生成的转换器类包含toMap和toBean方法，实现对象与Map的双向转换</li>
+ *   <li>转换过程会考虑字段上的{@link cc.anqin.processor.annotation.AutoKeyMapping}、
+ *       {@link cc.anqin.processor.annotation.IgnoreToMap}和{@link cc.anqin.processor.annotation.IgnoreToBean}注解</li>
+ *   <li>生成的转换器类会被放置在{@code auto.mappings}包下，并在运行时自动注册到{@link ConvertMap}中</li>
+ * </ol>
+ *
+ *
+ * @author Mr.An
+ * @since 2024/11/18
+ * @see AutoToMap
+ * @see cc.anqin.processor.base.MappingConvert
+ * @see ConvertMap
+ */
+@SupportedAnnotationTypes("cc.anqin.processor.annotation.AutoToMap")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class MapConverterProcessor extends AbstractProcessor {
 
-    private final Map<String, String> converterRegistry = new HashMap<>();
+    /**
+     * 转换器注册表
+     * <p>
+     * 用于保存所有生成的转换器信息，键为原始类的全限定名，值为生成的转换器类名。
+     * 此注册表用于生成元数据文件，便于运行时快速查找转换器。
+     * </p>
+     */
+    private static final Map<String, String> converterRegistry = new HashMap<>();
 
-    Log log = LogFactory.get(MapConverterProcessor.class);
 
+
+    /**
+     * 处理注解
+     * <p>
+     * 实现AbstractProcessor的process方法，处理源代码中的{@link AutoToMap}注解。
+     * 对于每个标记了该注解的类，生成对应的转换器实现类，并将信息记录到注册表中。
+     * </p>
+     *
+     * @param annotations 要处理的注解类型集合
+     * @param roundEnv 当前轮次的环境信息，提供对被注解元素的访问
+     * @return 如果注解已被此处理器完全处理，则返回true；否则返回false
+     */
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        // 查找所有被 @AutoToMap 标记的注解类型
+        for (Element element : roundEnv.getElementsAnnotatedWith(AutoToMap.class)) {
+            if (element instanceof TypeElement) {
+                TypeElement typeElement = (TypeElement) element;
+                generateMethod(typeElement);
 
-        for (TypeElement annotationType : annotations) {
-            // 检查当前注解类型是否被 @AutoToMap 标记
-            if (isAutoToMap(annotationType)) {
-                log.info("Found @AutoToMap annotation: " + annotationType.getQualifiedName());
-                processAutoToMap(annotationType, roundEnv);
+                // 注册转换器信息
+                String originalClassName = typeElement.getQualifiedName().toString();
+                String converterClassName = ConvertMap.getConvertName(originalClassName);
+
+                converterRegistry.put(originalClassName, PACKAGE_PREFIX + converterClassName);
             }
         }
 
@@ -55,126 +98,41 @@ public class MapConverterProcessor extends AbstractProcessor {
         return true;
     }
 
-    private void processAutoToMap(TypeElement annotationType, RoundEnvironment roundEnv) {
-        log.info("Processing annotation: " + annotationType.getQualifiedName());
-
-        // 找到了一个衍生注解（@AutoToMap），获取所有被它标记的类
-        Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(annotationType);
-        for (Element element : elements) {
-            if (element.getKind() != ElementKind.CLASS) {
-                continue;
-            }
-
-            TypeElement classElement = (TypeElement) element;
-            // 获取用户注解上的参数
-            String[] excludeFields = getExcludeFieldsFromAnnotation(classElement, annotationType);
-
-            Pair<TypeElement, TypeElement> mappingPair = getMappingFromAnnotation(classElement, annotationType);
-
-            String qualifiedName = generateClass(mappingPair, excludeFields);
-
-            // 注册转换器信息
-            converterRegistry.put(classElement.getQualifiedName().toString(), qualifiedName);
-        }
-    }
-
-
-    /**
-     * 检查给定的注解元素是否是 @AutoToMap
-     */
-    private boolean isAutoToMap(TypeElement annotationElement) {
-        String autoToMapCompilerName = "cc.anqin.processor.annotation.AutoToMap";
-        return annotationElement.getQualifiedName().toString().equals(autoToMapCompilerName);
-    }
-
-    /**
-     * 从注解中获取排除字段列表
-     */
-    private String[] getExcludeFieldsFromAnnotation(Element element, TypeElement annotationType) {
-        // 优先从用户注解获取排除字段
-        @SuppressWarnings("unchecked")
-        List<AnnotationValue> excludeValues =
-                (List<AnnotationValue>)
-                        getFromAnnotationValue(element, annotationType, "exclude");
-
-        if (excludeValues == null || excludeValues.isEmpty()) {
-            return new String[0];
-        }
-        String[] excludes = new String[excludeValues.size()];
-        for (int i = 0; i < excludeValues.size(); i++) {
-            excludes[i] = excludeValues.get(i).getValue().toString();
-        }
-        String name = annotationType.getQualifiedName().toString();
-        log.info(StrUtil.format("{} Excluding fields: {}", name, Arrays.toString(excludes)));
-        return excludes;
-    }
-
-
-    private Pair<TypeElement, TypeElement> getMappingFromAnnotation(TypeElement element, TypeElement annotationType) {
-        TypeMirror value = (TypeMirror) getFromAnnotationValue(element, annotationType, "mapping");
-        TypeElement mapping;
-        Pair<TypeElement, TypeElement> pair;
-        if (value == null || value.toString().equals(Object.class.getName())) {
-            mapping = processingEnv.getElementUtils().getTypeElement(element.getQualifiedName().toString());
-            pair = Pair.of(null, mapping);
-        } else {
-            mapping = (TypeElement) processingEnv.getTypeUtils().asElement(value);
-            pair = Pair.of(element, mapping);
-        }
-        log.info(StrUtil.format("{} Mapping to: {}", element.getSimpleName(), mapping.getSimpleName()));
-        return pair;
-    }
-
-
-    private Object getFromAnnotationValue(Element element, TypeElement annotationType, String fieldName) {
-        for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
-            if (processingEnv.getTypeUtils().isSameType(mirror.getAnnotationType().asElement().asType(), annotationType.asType())) {
-                Map<? extends ExecutableElement, ? extends AnnotationValue> values = mirror.getElementValues();
-                for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : values.entrySet()) {
-                    if (fieldName.equals(entry.getKey().getSimpleName().toString())) {
-                        return entry.getValue().getValue();
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
 
     /**
      * 为给定的类型元素生成转换器实现类
+     * <p>
+     * 该方法负责为标记了{@link AutoToMap}注解的类生成对应的转换器实现类。
+     * 生成的类将实现{@link cc.anqin.processor.base.MappingConvert}接口，
+     * 并提供toMap和toBean方法的具体实现。
+     * </p>
+     * <p>
+     * 生成的类会被添加{@link cc.anqin.processor.annotation.Generated}注解，
+     * 包含生成器信息、生成时间、源类信息等元数据。
+     * </p>
+     *
+     * @param typeElement 要处理的类型元素，表示被{@link AutoToMap}注解标记的类
      */
-    private String generateClass(Pair<TypeElement, TypeElement> mappingPair, String[] excludeFields) {
-
-        TypeElement typeElement = mappingPair.getValue();
-
-        TypeElement mappingElement = mappingPair.getKey();
-
-        String className = Opt.ofNullable(mappingElement)
-                .map(t -> GENERATE_NAME_SUFFIX.apply(t.getSimpleName().toString() + "_mapping_" + typeElement.getSimpleName().toString()))
-                .orElse(GENERATE_NAME_SUFFIX.apply(typeElement.getSimpleName().toString()));
-
-        String source = Opt.ofNullable(mappingElement)
-                .map(t -> t.getQualifiedName().toString())
-                .orElse(typeElement.getQualifiedName().toString());
+    private void generateMethod(TypeElement typeElement) {
+        String className = ConvertMap.getConvertName(typeElement.getSimpleName().toString());
 
         String packageName = processingEnv.getElementUtils().getPackageOf(typeElement).toString();
 
+        System.out.println("Generating file: " + className);
 
-        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,
-                "Generating converter for: " + typeElement.getQualifiedName());
-
-        // 创建 @Generated 注解
+        // 创建  @Generated 注解
         AnnotationSpec componentAnnotation = AnnotationSpec
                 .builder(ClassName.get("cc.anqin.processor.annotation", "Generated"))
-                .addMember("value", "$S", "cc.anqin.processor.MapConverterProcessor")
-                .addMember("date", "$S", LocalDateTime.now())
-                .addMember("comments", "$S", "Generated by MapConverterProcessor; Introduction: https://anqin.cc/")
+                .addMember("value", "$S", "cc.anqin.processor.MapConverterProcessor") // 添加生成器名称
+                .addMember("date", "$S", LocalDateTime.now())        // 添加当前日期
+                .addMember("comments", "$S", "Generated by MapConverterProcessor; Introduction: https://anqin.cc/")   // 添加注释
                 .addMember("repository", "$S", "https://github.com/anqinworks/auto-mapping-map")
-                .addMember("source", "$S", source)
+                .addMember("source", "$S", typeElement.getQualifiedName().toString())
                 .build();
 
+
         // 创建实现 MappingConvert 接口的类
+        assert className != null;
         TypeSpec mapConverterClass = TypeSpec.classBuilder(className)
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(componentAnnotation)
@@ -182,55 +140,84 @@ public class MapConverterProcessor extends AbstractProcessor {
                         ClassName.get("cc.anqin.processor.base", "MappingConvert"),
                         TypeName.get(typeElement.asType())
                 ))
-                .addMethod(toMap(typeElement, excludeFields))
-                .addMethod(toBean(typeElement, excludeFields))
+                .addMethod(toMap(typeElement))
+                .addMethod(toBean(typeElement))
                 .build();
 
-        log.info(StrUtil.format("Generating class: {}", className));
-
         write(PACKAGE_PREFIX + packageName, mapConverterClass);
-
-        return PACKAGE_PREFIX + packageName + "." + className;
     }
 
     /**
      * 生成toMap方法的实现
+     * <p>
+     * 该方法负责生成将实体对象转换为Map的方法实现。生成的方法会：
+     * <ul>
+     *   <li>添加空值检查，当输入为null时返回空Map</li>
+     *   <li>创建一个新的HashMap实例用于存储转换结果</li>
+     *   <li>通过{@link CollectFields#toMapCollectFields}方法收集实体类的字段并生成转换代码</li>
+     * </ul>
+     * </p>
+     *
+     * @param typeElement 要处理的类型元素，表示需要生成转换方法的实体类
+     * @return 生成的toMap方法定义
+     * @see CollectFields#toMapCollectFields
      */
-    private MethodSpec toMap(TypeElement typeElement, String[] excludeFields) {
+    private MethodSpec toMap(TypeElement typeElement) {
+        // 创建 toMap 方法
         MethodSpec.Builder toMapBuilder = MethodSpec.methodBuilder("toMap")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(Override.class)
                 .returns(ParameterizedTypeName.get(Map.class, String.class, Object.class))
                 .addParameter(TypeName.get(typeElement.asType()), "entity")
-                .beginControlFlow("if (entity == null)")
-                .addStatement("    return $T.emptyMap()", ClassName.get("java.util", "Collections"))
-                .endControlFlow()
-                .addStatement("$T<String, Object> map = new $T<>()", Map.class, HashMap.class);
+                .beginControlFlow("if (entity == null)") // 添加空检查
+                .addStatement("    return $T.emptyMap()", ClassName.get("java.util", "Collections")) // 如果 dataMap 为空，返回新实例
+                .endControlFlow();
 
-        // 传递排除字段给收集器
-        CollectFields.toMapCollectFields(typeElement, toMapBuilder, processingEnv, excludeFields);
+        // 初始化 Map
+        toMapBuilder.addStatement("$T<String, Object> map = new $T<>()", Map.class, HashMap.class);
+
+        // 遍历字段（包含父类）
+        CollectFields.toMapCollectFields(typeElement, toMapBuilder, processingEnv);
 
         toMapBuilder.addStatement("return map");
+
         return toMapBuilder.build();
     }
 
     /**
      * 生成toBean方法的实现
+     * <p>
+     * 该方法负责生成将Map转换为实体对象的方法实现。生成的方法会：
+     * <ul>
+     *   <li>添加空值检查，当输入为空Map时返回新的实体实例</li>
+     *   <li>创建一个新的实体实例用于设置属性</li>
+     *   <li>通过{@link CollectFields#toBeanCollectFields}方法收集实体类的字段并生成转换代码</li>
+     * </ul>
+     * </p>
+     *
+     * @param typeElement 要处理的类型元素，表示需要生成转换方法的实体类
+     * @return 生成的toBean方法定义
+     * @see CollectFields#toBeanCollectFields
      */
-    private MethodSpec toBean(TypeElement typeElement, String[] excludeFields) {
+    private MethodSpec toBean(TypeElement typeElement) {
         TypeMirror targetType = typeElement.asType();
+        // 创建 toBean 方法
         MethodSpec.Builder toBeanMethodBuilder = MethodSpec.methodBuilder("toBean")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(Override.class)
                 .addParameter(ParameterizedTypeName.get(Map.class, String.class, Object.class), "dataMap")
                 .returns(TypeVariableName.get(targetType))
-                .beginControlFlow("if ($T.isEmpty(dataMap))", ClassName.get("cn.hutool.core.collection", "CollUtil"))
-                .addStatement("    return new $T()", targetType)
+                .beginControlFlow("if ($T.isEmpty(dataMap))", ClassName.get("cn.hutool.core.collection", "CollUtil")) // 添加空检查
+                .addStatement("    return new $T()", targetType) // 如果 dataMap 为空，返回新实例
                 .endControlFlow()
-                .addStatement("$T bean = new $T()", targetType, targetType);
+                .addStatement("$T bean = new $T()", targetType, targetType); // 初始化 Bean
 
-        // 传递排除字段给收集器
-        CollectFields.toBeanCollectFields(typeElement, toBeanMethodBuilder, processingEnv, excludeFields);
+
+        System.out.println("typeElement : " + typeElement);
+
+
+        // 遍历Map的 字段
+        CollectFields.toBeanCollectFields(typeElement, toBeanMethodBuilder, processingEnv);
 
         toBeanMethodBuilder.addStatement("return bean");
         return toBeanMethodBuilder.build();
@@ -238,20 +225,44 @@ public class MapConverterProcessor extends AbstractProcessor {
 
     /**
      * 将生成的类写入文件
+     * <p>
+     * 该方法负责将JavaPoet生成的类定义写入到Java源文件中。
+     * 使用处理器环境提供的Filer接口创建文件并写入内容。
+     * </p>
+     *
+     * @param packageName 生成的类所在的包名
+     * @param mapConverterClass 生成的类定义
+     * @throws RuntimeException 如果写入文件过程中发生IO异常
      */
     private void write(String packageName, TypeSpec mapConverterClass) {
+
+        // 写入 Java 文件
         JavaFile javaFile = JavaFile.builder(packageName, mapConverterClass).build();
         try {
             javaFile.writeTo(processingEnv.getFiler());
         } catch (IOException e) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                    "Failed to generate converter class: " + e.getMessage());
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to generate toBean method: " + e.getMessage());
             throw new RuntimeException(e);
         }
     }
 
     /**
      * 生成转换器注册表的JSON文件
+     * <p>
+     * 该方法负责将收集到的转换器信息写入到JSON格式的注册表文件中。
+     * 生成的文件位于META-INF目录下，命名为map-converter-registry.json，
+     * 用于在运行时快速查找和加载转换器实现类。
+     * </p>
+     * <p>
+     * JSON文件的格式为：
+     * <pre>
+     * {
+     *   "com.example.User": "auto.mappings.com.example.User_MapConverter",
+     *   "com.example.Order": "auto.mappings.com.example.Order_MapConverter"
+     * }
+     * </pre>
+     * 其中，键为原始类的全限定名，值为生成的转换器类的全限定名。
+     * </p>
      */
     private void generateJsonRegistryFile() {
         if (converterRegistry.isEmpty()) {
@@ -259,6 +270,7 @@ public class MapConverterProcessor extends AbstractProcessor {
         }
 
         try {
+            // 手动构建JSON内容
             StringBuilder jsonBuilder = new StringBuilder();
             jsonBuilder.append("{\n");
 
@@ -277,10 +289,12 @@ public class MapConverterProcessor extends AbstractProcessor {
 
             jsonBuilder.append("\n}");
 
-            FileObject fileObject = processingEnv.getFiler().createResource(
+            // 创建JSON文件
+            Filer filer = processingEnv.getFiler();
+            FileObject fileObject = filer.createResource(
                     StandardLocation.CLASS_OUTPUT,
                     "",
-                    "META-INF/map-converter-registry.json"
+                    ConfigLoader.CONFIG_FILE_PATH
             );
 
             try (Writer writer = fileObject.openWriter()) {
@@ -298,6 +312,13 @@ public class MapConverterProcessor extends AbstractProcessor {
 
     /**
      * 对JSON字符串进行转义处理
+     * <p>
+     * 该方法负责对字符串中的特殊字符进行转义，确保生成的JSON文件格式正确。
+     * 转义的字符包括：反斜杠、双引号、退格符、换页符、换行符、回车符和制表符。
+     * </p>
+     *
+     * @param input 需要转义的输入字符串
+     * @return 转义后的字符串，如果输入为null则返回空字符串
      */
     private String escapeJsonString(String input) {
         if (input == null) {

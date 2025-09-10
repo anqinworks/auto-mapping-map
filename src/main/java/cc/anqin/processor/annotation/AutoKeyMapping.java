@@ -15,26 +15,26 @@ import java.lang.annotation.Target;
  * </p>
  * 示例：
  *
- * <blockquote>
- *  <pre>
- * &#064;AutoToMap
+ *
+ *  <pre>{@code
+ * @AutoToMap
  * public class User {
  *     // 使用自定义键名
- *     &#064;AutoKeyMapping(target  = "userName")
+ *     @AutoKeyMapping(target  = "userName")
  *     private String name;
  *     
  *     // 仅在转为Map时使用
- *     &#064;AutoKeyMapping(method  = MappingEnum.TO_MAP)
+ *     @AutoKeyMapping(method  = MappingEnum.TO_MAP)
  *     private String sensitiveData;
  *     
  *     // 忽略此字段
- *     &#064;AutoKeyMapping(ignore  = true)
+ *     @AutoKeyMapping(ignore  = true)
  *     private String temporaryField;
  *     
  *     // Getters and setters
  * }
- * </pre>
- * </blockquote>
+ * }</pre>
+ *
  *
  * @author Mr.An
  * @since 2024/11/27

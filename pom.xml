@@ -6,7 +6,7 @@
     <artifactId>auto-mapping-map</artifactId>
     <groupId>io.github.anqinworks</groupId>
     <name>auto-mapping-map</name>
-    <version>4.1</version>
+    <version>4.0.0</version>
     <description>实体类（POJO）和 Map 之间的相互转换</description>
     <url>https://github.com/anqinworks/auto-mapping-map</url>
     <packaging>jar</packaging>

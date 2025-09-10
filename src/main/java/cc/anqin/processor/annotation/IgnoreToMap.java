@@ -13,21 +13,19 @@ import java.lang.annotation.Target;
  * 通常用于排除敏感信息、临时字段或不需要序列化的复杂对象。
  * </p>
  * 示例：
- * <blockquote>
- * <pre>
  *
- * &#064;AutoToMap
+ * <pre>{@code
+ *
+ * @AutoToMap
  * public class User {
  *     private String name;
  *     
- *     &#064;IgnoreToMap
+ *     @IgnoreToMap
  *     private String password; // 此字段在转换为Map时将被忽略
  *     
  *     // Getters and setters
  * }
- *
- * </pre>
- * </blockquote>
+ * }</pre>
  *
  * @author Mr.An
  * @since 2025/03/06
