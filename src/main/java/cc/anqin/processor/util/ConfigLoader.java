@@ -3,6 +3,8 @@ package cc.anqin.processor.util;
 import cc.anqin.processor.base.MappingConvert;
 import cn.hutool.core.util.ClassUtil;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -36,20 +38,46 @@ public class ConfigLoader {
      *
      * @return {@link Map }<{@link String }, {@link MappingConvert }<{@link ? }>>
      */
-    public static Map<String, MappingConvert<?>> scanLoadAllConfigsAsSingleMap(){
+    public static Map<String, MappingConvert<?>> scanLoadAllConfigsAsSingleMap() {
         // 1. 扫描指定包下所有实现了MappingConvert接口的类
-        Set<Class<?>> classes = ClassUtil.scanPackageBySuper(PACKAGE_PREFIX, MappingConvert.class);
+        Set<Class<?>> classes = ClassUtil.scanPackageBySuper("auto.mappings", MappingConvert.class);
 
         // 2. 创建转换器实例并构建不可修改的映射表
         Map<String, MappingConvert<?>> dataMap = classes.stream()
                 .filter(Objects::nonNull)
+                .map(ConfigLoader::createConverterInstance)
                 .collect(Collectors.toMap(
-                        Class::getSimpleName,
-                        ConfigLoader::createConverterInstance,
+                        converter -> getGenericType(converter.getClass()).getName(),
+                        converter -> converter,
                         (existing, replacement) -> existing // 重复键处理策略：保留现有值
                 ));
 
         return Collections.unmodifiableMap(dataMap);
+    }
+
+
+    /**
+     * 辅助方法：获取MappingConvert的泛型类型
+     *
+     * @param converterClass 转换器类
+     * @return {@link Class }<{@link ? }>
+     */
+    private static Class<?> getGenericType(Class<?> converterClass) {
+        Type[] genericInterfaces = converterClass.getGenericInterfaces();
+        for (Type genericInterface : genericInterfaces) {
+            if (genericInterface instanceof ParameterizedType) {
+                ParameterizedType paramType = (ParameterizedType) genericInterface;
+                if (paramType.getRawType().equals(MappingConvert.class)) {
+                    Type actualType = paramType.getActualTypeArguments()[0];
+                    if (actualType instanceof Class) {
+                        return (Class<?>) actualType;
+                    } else if (actualType instanceof ParameterizedType) {
+                        return (Class<?>) ((ParameterizedType) actualType).getRawType();
+                    }
+                }
+            }
+        }
+        throw new IllegalStateException("无法获取MappingConvert的泛型类型: " + converterClass);
     }
 
 

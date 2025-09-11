@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static cc.anqin.processor.util.ConfigLoader.PACKAGE_PREFIX;
+
 /**
  * 映射转换工厂类
  *
@@ -51,14 +53,6 @@ public class ConvertMap {
     /** 日志 */
     private static final Log log = Log.get(ConvertMap.class);
 
-    /**
-     * 转换器类名后缀
-     * <p>
-     * 用于构建转换器类的完整类名。例如，对于实体类{@code User}，
-     * 其对应的转换器类名为{@code User_MapConverter}。
-     * </p>
-     */
-    public static final String CLASS_SUFFIX = "_MapConverter";
 
     /**
      * 转换器映射表
@@ -81,7 +75,6 @@ public class ConvertMap {
 
         log.info("转换器初始化总耗时: {}ms", System.currentTimeMillis() - startTime);
     }
-
 
 
     /**
@@ -295,37 +288,5 @@ public class ConvertMap {
      */
     public static Set<String> getRegisteredConverterNames() {
         return Collections.unmodifiableSet(CONVERT_MAP.keySet());
-    }
-
-    /**
-     * 根据类获取转换器名称
-     * <p>
-     * 根据给定的类对象构建对应转换器的名称。转换器名称由类的简单名称加上{@link #CLASS_SUFFIX}组成。
-     * 例如，对于类{@code com.example.User}，其转换器名称为{@code User_MapConverter}。
-     * </p>
-     *
-     * @param clazz 需要获取转换器名称的类对象
-     * @return 对应的转换器名称
-     * @throws NullPointerException 如果clazz为null
-     */
-    public static String getConvertName(Class<?> clazz) {
-        return clazz.getSimpleName() + CLASS_SUFFIX;
-    }
-
-    /**
-     * 根据类名获取转换器名称
-     * <p>
-     * 根据给定的类名字符串构建对应转换器的名称。转换器名称由类名加上{@link #CLASS_SUFFIX}组成。
-     * 例如，对于类名{@code User}，其转换器名称为{@code User_MapConverter}。
-     * </p>
-     *
-     * @param className 类名字符串
-     * @return 对应的转换器名称
-     */
-    public static String getConvertName(String className) {
-        if (StrUtil.isBlank(className)) {
-            return null;
-        }
-        return className + CLASS_SUFFIX;
     }
 }

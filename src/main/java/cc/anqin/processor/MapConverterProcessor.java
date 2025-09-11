@@ -4,6 +4,7 @@ import cc.anqin.processor.annotation.AutoToMap;
 import cc.anqin.processor.base.ConvertMap;
 import cc.anqin.processor.util.CollectFields;
 import cc.anqin.processor.util.ConfigLoader;
+import cn.hutool.core.util.StrUtil;
 import com.squareup.javapoet.*;
 
 import javax.annotation.processing.*;
@@ -63,7 +64,6 @@ public class MapConverterProcessor extends AbstractProcessor {
     private static final Map<String, String> converterRegistry = new HashMap<>();
 
 
-
     /**
      * 处理注解
      * <p>
@@ -84,9 +84,8 @@ public class MapConverterProcessor extends AbstractProcessor {
 
                 // 注册转换器信息
                 String originalClassName = typeElement.getQualifiedName().toString();
-                String converterClassName = ConvertMap.getConvertName(originalClassName);
 
-                converterRegistry.put(originalClassName, PACKAGE_PREFIX + converterClassName);
+                converterRegistry.put(originalClassName, PACKAGE_PREFIX + originalClassName);
             }
         }
 
@@ -114,11 +113,10 @@ public class MapConverterProcessor extends AbstractProcessor {
      * @param typeElement 要处理的类型元素，表示被{@link AutoToMap}注解标记的类
      */
     private void generateMethod(TypeElement typeElement) {
-        String className = ConvertMap.getConvertName(typeElement.getSimpleName().toString());
+
+        String className = typeElement.getSimpleName().toString();
 
         String packageName = processingEnv.getElementUtils().getPackageOf(typeElement).toString();
-
-        System.out.println("Generating file: " + className);
 
         // 创建  @Generated 注解
         AnnotationSpec componentAnnotation = AnnotationSpec
@@ -132,7 +130,6 @@ public class MapConverterProcessor extends AbstractProcessor {
 
 
         // 创建实现 MappingConvert 接口的类
-        assert className != null;
         TypeSpec mapConverterClass = TypeSpec.classBuilder(className)
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(componentAnnotation)
@@ -212,10 +209,6 @@ public class MapConverterProcessor extends AbstractProcessor {
                 .endControlFlow()
                 .addStatement("$T bean = new $T()", targetType, targetType); // 初始化 Bean
 
-
-        System.out.println("typeElement : " + typeElement);
-
-
         // 遍历Map的 字段
         CollectFields.toBeanCollectFields(typeElement, toBeanMethodBuilder, processingEnv);
 
@@ -240,6 +233,8 @@ public class MapConverterProcessor extends AbstractProcessor {
         JavaFile javaFile = JavaFile.builder(packageName, mapConverterClass).build();
         try {
             javaFile.writeTo(processingEnv.getFiler());
+
+            System.out.println(StrUtil.format("Generating  packageName:{},  file:{} ", packageName, mapConverterClass.name));
         } catch (IOException e) {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Failed to generate toBean method: " + e.getMessage());
             throw new RuntimeException(e);
